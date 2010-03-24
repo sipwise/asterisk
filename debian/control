@@ -1,0 +1,13 @@
+Source: sipwise-asterisk
+Section: comm
+Priority: extra
+Maintainer: root <jbonilla@sipwise.com>
+Build-Depends: debhelper (>= 7), autotools-dev, unixodbc-dev, libltdl3-dev, zaptel, libssl-dev, libncurses-dev
+Standards-Version: 3.7.3
+Homepage: <insert the upstream URL, if relevant>
+
+Package: sipwise-asterisk
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, unixodbc, libltdl3, zaptel
+Description: Sipwise's custom asterisk
+ Asterisk 1.4.11 with Sipwise patched
