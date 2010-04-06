@@ -39,7 +39,7 @@
 		<depend>unixodbc</depend>
 		<depend>ltdl</depend>
 		<conflict>IMAP_STORAGE</conflict>
-		<defaultenabled>no</defaultenabled>
+		<defaultenabled>yes</defaultenabled>
 	</member>
 	<member name="IMAP_STORAGE" displayname="Storage of Voicemail using IMAP4">
 		<depend>imap_tk</depend>
