@@ -5977,7 +5977,7 @@ static int vm_options(struct ast_channel *chan, struct ast_vm_user *vmu, struct 
 			retries = 0;
 		switch (cmd) {
 		case '1':
-			snprintf(prefile,sizeof(prefile), "%s%s/%s/unavail", VM_SPOOL_DIR, vmu->context, vms->username);
+			snprintf(prefile,sizeof(prefile), "%s%s/%s/unavail", VM_SPOOL_DIR, vmu->context, vmu->mailbox);
 #ifndef IMAP_STORAGE
 			cmd = play_record_review(chan,"vm-rec-unv",prefile, maxgreet, fmtc, 0, vmu, &duration, NULL, record_gain, NULL);
 #else
@@ -5985,7 +5985,7 @@ static int vm_options(struct ast_channel *chan, struct ast_vm_user *vmu, struct 
 #endif
 			break;
 		case '2': 
-			snprintf(prefile,sizeof(prefile), "%s%s/%s/busy", VM_SPOOL_DIR, vmu->context, vms->username);
+			snprintf(prefile,sizeof(prefile), "%s%s/%s/busy", VM_SPOOL_DIR, vmu->context, vmu->mailbox);
 #ifndef IMAP_STORAGE
 			cmd = play_record_review(chan,"vm-rec-busy",prefile, maxgreet, fmtc, 0, vmu, &duration, NULL, record_gain, NULL);
 #else
@@ -5993,7 +5993,7 @@ static int vm_options(struct ast_channel *chan, struct ast_vm_user *vmu, struct 
 #endif
 			break;
 		case '3': 
-			snprintf(prefile,sizeof(prefile), "%s%s/%s/greet", VM_SPOOL_DIR, vmu->context, vms->username);
+			snprintf(prefile,sizeof(prefile), "%s%s/%s/greet", VM_SPOOL_DIR, vmu->context, vmu->mailbox);
 #ifndef IMAP_STORAGE
 			cmd = play_record_review(chan,"vm-rec-name",prefile, maxgreet, fmtc, 0, vmu, &duration, NULL, record_gain, NULL);
 #else
@@ -6032,7 +6032,7 @@ static int vm_options(struct ast_channel *chan, struct ast_vm_user *vmu, struct 
 				}
 			}
 			if (strcmp(newpassword, newpassword2)) {
-				ast_log(LOG_NOTICE,"Password mismatch for user %s (%s != %s)\n", vms->username, newpassword, newpassword2);
+				ast_log(LOG_NOTICE,"Password mismatch for user %s (%s != %s)\n", vmu->mailbox, newpassword, newpassword2);
 				cmd = ast_play_and_wait(chan, "vm-mismatch");
 				break;
 			}
@@ -6041,7 +6041,7 @@ static int vm_options(struct ast_channel *chan, struct ast_vm_user *vmu, struct 
 			else 
 				vm_change_password_shell(vmu,newpassword);
 			if (option_debug > 2)
-				ast_log(LOG_DEBUG,"User %s set password to %s of length %d\n",vms->username,newpassword,(int)strlen(newpassword));
+				ast_log(LOG_DEBUG,"User %s set password to %s of length %d\n",vmu->mailbox,newpassword,(int)strlen(newpassword));
 			cmd = ast_play_and_wait(chan,"vm-passchanged");
 			break;
 		case '*': 
@@ -6882,6 +6882,7 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 				cmd = 0;
 			break;
 		case '0':
+			ast_log(LOG_ERROR, ">>>>>>>>>> agranig: setting options for '%s'", vmu->mailbox);
 			cmd = vm_options(chan, vmu, &vms, vmfmts, record_gain);
 			if (useadsi)
 				adsi_status(chan, &vms);
