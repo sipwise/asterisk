@@ -1,3 +1,9 @@
+sipwise-asterisk (1.4.11-8) unstable; urgency=low
+
+  * Voicemail fixes to use customer-id instead of cli
+
+ -- root <jbonilla@sipwise.com>  Tue, 16 Mar 2010 11:05:22 +0100
+
 sipwise-asterisk (1.4.11-7) unstable; urgency=low
 
   * Odbc storage enabled by default
