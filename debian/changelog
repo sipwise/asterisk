@@ -1,4 +1,4 @@
-sipwise-asterisk (1.4.11-5) unstable; urgency=low
+sipwise-asterisk (1.4.11-7) unstable; urgency=low
 
   * Odbc storage enabled by default
   * LSB compliant init script
