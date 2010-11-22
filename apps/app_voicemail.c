@@ -689,10 +689,10 @@ static void apply_options_full(struct ast_vm_user *retval, struct ast_variable *
 			ast_copy_string(retval->context, tmp->value, sizeof(retval->context));
 		} else if (!strcasecmp(tmp->name, "customer_id")) { /* granig: use uuid instead of number */
 			ast_copy_string(retval->mailbox, tmp->value, sizeof(retval->mailbox));
-			ast_log (LOG_ERROR,"agranig: setting mailbox to '%s'\n", tmp->value);
+			ast_log (LOG_DEBUG,"setting mailbox to '%s'\n", tmp->value);
 		} else if (!strcasecmp(tmp->name, "mailbox")) { /* granig: but save number for announcement */
 			ast_copy_string(retval->dialed_num, tmp->value, sizeof(retval->dialed_num));
-			ast_log (LOG_ERROR,"agranig: setting dialed_num to '%s'\n", tmp->value);
+			ast_log (LOG_DEBUG,"setting dialed_num to '%s'\n", tmp->value);
 #ifdef IMAP_STORAGE
 		} else if (!strcasecmp(tmp->name, "imapuser")) {
 			ast_copy_string(retval->imapuser, tmp->value, sizeof(retval->imapuser));
@@ -723,7 +723,7 @@ static struct ast_vm_user *find_user_realtime(struct ast_vm_user *ivm, const cha
 		else
 			var = ast_load_realtime("voicemail", "mailbox", mailbox, "context", context, NULL);
 		if (var) {
-			ast_log (LOG_ERROR,"agranig: call apply_options_full\n");
+			ast_log (LOG_DEBUG,"call apply_options_full\n");
 			apply_options_full(retval, var);
 			ast_variables_destroy(var);
 		} else { 
@@ -759,7 +759,7 @@ static struct ast_vm_user *find_user(struct ast_vm_user *ivm, const char *contex
 		}
 	} else
 	{
-		ast_log (LOG_ERROR,"agranig: call find_user_realtime for '%s@%s'\n", mailbox, context);
+		ast_log (LOG_DEBUG,"call find_user_realtime for '%s@%s'\n", mailbox, context);
 		vmu = find_user_realtime(ivm, context, mailbox);
 	}
 	AST_LIST_UNLOCK(&users);
@@ -2089,19 +2089,19 @@ static int invent_message(struct ast_channel *chan, char *context, char *ext, ch
 		/* Dispose just in case */
 		DISPOSE(fn, -1);
 		/*
-		ast_log(LOG_WARNING, "agranig: stream/wait vm-theperson\n");
+		ast_log(LOG_DEBUG, "stream/wait vm-theperson\n");
 		res = ast_stream_and_wait(chan, "vm-theperson", chan->language, ecodes);
 		if (res) 
 		{
-			ast_log(LOG_WARNING, "agranig: failed to stream/wait vm-theperson\n");
+			ast_log(LOG_WARNING, "failed to stream/wait vm-theperson\n");
 			return res;
 		}
 		*/
-		ast_log(LOG_WARNING, "agranig: stream/wait dialed_num\n");
+		ast_log(LOG_DEBUG, "stream/wait dialed_num\n");
 		res = ast_say_digit_str(chan, dialed_num, ecodes, chan->language);
 		if (res)
 		{
-			ast_log(LOG_WARNING, "agranig: failed to stream/wait '%s'\n", dialed_num);
+			ast_log(LOG_WARNING, "failed to stream/wait '%s'\n", dialed_num);
 			return res;
 		}
 	}
@@ -6882,7 +6882,7 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 				cmd = 0;
 			break;
 		case '0':
-			ast_log(LOG_ERROR, ">>>>>>>>>> agranig: setting options for '%s'", vmu->mailbox);
+			ast_log(LOG_DEBUG, "setting options for '%s'", vmu->mailbox);
 			cmd = vm_options(chan, vmu, &vms, vmfmts, record_gain);
 			if (useadsi)
 				adsi_status(chan, &vms);
