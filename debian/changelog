@@ -1,0 +1,18 @@
+ngcp-asterisk (1.4.24.1-rsp+svn4100.1) unstable; urgency=low
+
+  [ Jon Bonilla ]
+  * Add upstart headers to init script.
+  * Add "status" option to init script to make it lsb compliant.
+
+  [ Andreas Granig ]
+  * Updated init script to version of latest official 1.4 branch for
+    proper LSB tags.
+
+ -- Michael Prokop <mprokop@sipwise.com>  Fri, 29 Apr 2011 01:13:31 +0200
+
+ngcp-asterisk (1.4.24.1-rsp+svn4100) unstable; urgency=low
+
+  * Initial release
+
+ -- Jon Bonilla <jbonilla@sipwise.com>  Fri, 8 Oct 2010 11:05:22 +0100
+

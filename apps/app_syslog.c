@@ -1,0 +1,215 @@
+/*
+ * Asterisk -- An open source telephony toolkit.
+ *
+ * Copyright (C) 2009, Jon Bonilla
+ *
+ * Jon Bonilla <manwe@aholab.ehu.es>
+ *
+ * See http://www.asterisk.org for more information about
+ * the Asterisk project. Please do not directly contact
+ * any of the maintainers of this project for assistance;
+ * the project provides a web site, mailing lists and IRC
+ * channels for your use.
+ *
+ * This program is free software, distributed under the terms of
+ * the GNU General Public License Version 2. See the LICENSE file
+ * at the top of the source tree.
+ */
+
+/*! \file
+ *
+ * \brief Syslogging Application
+ *
+ * \author Jon Bonilla (Manwe) manwe@aholab.ehu.es
+ *
+ * \ingroup applications
+ */
+
+/*** MODULEINFO
+        <defaultenabled>no</defaultenabled>
+ ***/
+
+#include "asterisk.h"
+
+ASTERISK_FILE_VERSION(__FILE__, "$Revision: 2 $")
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <syslog.h>
+
+#include "asterisk/channel.h"
+#include "asterisk/pbx.h"
+#include "asterisk/module.h"
+#include "asterisk/app.h"
+
+/*
+Had to redefine these constants as appear in syslog.h because asterisk developers redefine them their own way
+and they don't work as expected
+*/
+#undef LOG_EMERG
+#undef LOG_ALERT
+#undef LOG_CRIT
+#undef LOG_ERR
+#undef LOG_WARNING
+#undef LOG_NOTICE
+#undef LOG_INFO
+#undef LOG_DEBUG
+#define LOG_EMERG       0       /* system is unusable */
+#define LOG_ALERT       1       /* action must be taken immediately */
+#define LOG_CRIT        2       /* critical conditions */
+#define LOG_ERR         3       /* error conditions */
+#define LOG_WARNING     4       /* warning conditions */
+#define LOG_NOTICE      5       /* normal but significant condition */
+#define LOG_INFO        6       /* informational */
+#define LOG_DEBUG       7       /* debug-level messages */
+
+
+static char *app_syslog = "Syslog";
+static char *syslog_synopsis = "Syslog a given text";
+static char *syslog_descrip =
+"Syslog(message|[severity|facility|syslogtag|setuniqueid])\n"
+"  severity must be one of ERROR, WARNING, NOTICE, DEBUG, INFO, CRIT, ALERT, EMERG. Defaults to DEBUG\n"
+"  facility must be local0...local7. Defaults to USER\n"
+"  syslogtag if not present defaults to \"asterisk\"\n"
+"  setuniqueid is a 0-1 boolean that prepends or not channel's uniqueid to logging message. Defaults to 0";
+
+
+struct params {
+        char message[240];
+        char severity[10];
+        char facility[10];
+        char syslogtag[50];
+	int setuniqueid;
+};
+
+
+
+static int syslog_exec(struct ast_channel *chan, void *data)
+{
+	char *parse;
+	char message[255];
+	int log_severity, log_facility;
+	struct ast_module_user *u;
+	AST_DECLARE_APP_ARGS(args,
+                AST_APP_ARG(message);
+                AST_APP_ARG(severity);
+                AST_APP_ARG(facility);
+                AST_APP_ARG(syslogtag);
+		AST_APP_ARG(setuniqueid);
+        );
+
+	u = ast_module_user_add(chan);
+	if (ast_strlen_zero(data)) {
+		ast_module_user_remove(u);
+		return 0;
+	}
+
+	parse = ast_strdupa(data);
+	AST_STANDARD_APP_ARGS(args, parse);
+	
+	struct params *p;
+        p = ast_malloc(sizeof(struct params));
+        if (p) {
+		ast_copy_string(p->message, args.message, sizeof(p->message));
+
+		if (!ast_strlen_zero(args.severity)) {
+			ast_copy_string(p->severity, args.severity, sizeof(p->severity));	
+		}
+		else {
+			ast_copy_string(p->severity, "DEBUG", sizeof(p->severity));	
+		}
+		if (!ast_strlen_zero(args.facility)) {
+			ast_copy_string(p->facility, args.facility, sizeof(p->facility));
+		}
+		if (!ast_strlen_zero(args.syslogtag)) {
+			ast_copy_string(p->syslogtag, args.syslogtag, sizeof(p->syslogtag));
+		}
+		else {
+			ast_copy_string(p->syslogtag, "asterisk", sizeof(p->syslogtag));
+		}
+		if (!ast_strlen_zero(args.setuniqueid)) {
+			p->setuniqueid = atoi(args.setuniqueid);
+		}
+		else {
+			p->setuniqueid = 0;
+		}
+	}
+
+	if (!strcasecmp(p->severity, "DEBUG")) {
+		log_severity = LOG_DEBUG;
+	} else if (!strcasecmp(p->severity, "WARNING")) {
+		log_severity = LOG_WARNING;
+	} else if (!strcasecmp(p->severity, "NOTICE")) {
+		log_severity = LOG_NOTICE;
+	} else if (!strcasecmp(p->severity, "ERROR")) {
+		log_severity = LOG_ERR;
+	} else if (!strcasecmp(p->severity, "INFO")) {
+		log_severity = LOG_INFO;
+	} else if (!strcasecmp(p->severity, "CRIT")) {
+		log_severity = LOG_CRIT;
+	} else if (!strcasecmp(p->severity, "ALERT")) {
+		log_severity = LOG_ALERT;
+	} else if (!strcasecmp(p->severity, "EMERG")) {
+		log_severity = LOG_EMERG;
+	} else {
+		log_severity = LOG_DEBUG;
+	}
+
+        if (!strcasecmp(p->facility, "LOCAL0")) {
+                log_facility = LOG_LOCAL0;
+        } else if (!strcasecmp(p->facility, "LOCAL1")) {
+                log_facility = LOG_LOCAL1;
+        } else if (!strcasecmp(p->facility, "LOCAL2")) {
+                log_facility = LOG_LOCAL2;
+        } else if (!strcasecmp(p->facility, "LOCAL3")) {
+                log_facility = LOG_LOCAL3;
+        } else if (!strcasecmp(p->facility, "LOCAL4")) {
+                log_facility = LOG_LOCAL4;
+        } else if (!strcasecmp(p->facility, "LOCAL5")) {
+                log_facility = LOG_LOCAL5;
+        } else if (!strcasecmp(p->facility, "LOCAL6")) {
+                log_facility = LOG_LOCAL6;
+        } else if (!strcasecmp(p->facility, "LOCAL7")) {
+                log_facility = LOG_LOCAL7;
+        } else {
+                log_facility = LOG_USER;
+        }
+	
+	if (p->setuniqueid == 1) {
+		sprintf(message,"[%s] %s",chan->uniqueid,p->message);
+	}
+	else {
+		ast_copy_string(message, p->message, sizeof(message));
+	}
+
+	openlog(p->syslogtag, LOG_ODELAY,log_facility);
+	syslog(log_severity,message);
+	closelog();
+	ast_free(p);
+	ast_module_user_remove(u);
+	return 0;
+}
+
+static int unload_module(void)
+{
+	int res = 0;
+
+	res |= ast_unregister_application(app_syslog);
+
+	ast_module_user_hangup_all();
+
+	return res;	
+}
+
+static int load_module(void)
+{
+	int res = 0;
+
+	res = ast_register_application(app_syslog, syslog_exec, syslog_synopsis, syslog_descrip);
+
+	return res;
+}
+
+AST_MODULE_INFO_STANDARD(ASTERISK_GPL_KEY, "Syslog a message");
