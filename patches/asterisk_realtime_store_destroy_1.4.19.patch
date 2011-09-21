@@ -1,0 +1,88 @@
+--- include/asterisk/config.h	(revision 112598)
++++ include/asterisk/config.h	(working copy)
+@@ -49,6 +49,8 @@
+ typedef struct ast_variable *realtime_var_get(const char *database, const char *table, va_list ap);
+ typedef struct ast_config *realtime_multi_get(const char *database, const char *table, va_list ap);
+ typedef int realtime_update(const char *database, const char *table, const char *keyfield, const char *entity, va_list ap);
++typedef int realtime_store(const char *database, const char *table, va_list ap);
++typedef int realtime_destroy(const char *database, const char *table, const char *keyfield, const char *entity, va_list ap);
+ 
+ struct ast_config_engine {
+ 	char *name;
+@@ -56,6 +58,8 @@
+ 	realtime_var_get *realtime_func;
+ 	realtime_multi_get *realtime_multi_func;
+ 	realtime_update *update_func;
++	realtime_store *store_func;
++	realtime_destroy *destroy_func;
+ 	struct ast_config_engine *next;
+ };
+ 
+@@ -156,6 +160,25 @@
+  */
+ int ast_update_realtime(const char *family, const char *keyfield, const char *lookup, ...);
+ 
++/*! 
++ * \brief Create realtime configuration 
++ * \param family which family/config to be created
++ * This function is used to create a parameter in realtime configuration space.
++ *
++ */
++int ast_store_realtime(const char *family, ...);
++
++/*! 
++ * \brief Destroy realtime configuration 
++ * \param family which family/config to be destroyed
++ * \param keyfield which field to use as the key
++ * \param lookup which value to look for in the key field to match the entry.
++ * This function is used to destroy an entry in realtime configuration space.
++ * Additional params are used as keys.
++ *
++ */
++int ast_destroy_realtime(const char *family, const char *keyfield, const char *lookup, ...);
++
+ /*! \brief Check if realtime engine is configured for family 
+  * returns 1 if family is configured in realtime and engine exists
+  * \param family which family/config to be checked
+--- main/config.c	(revision 112598)
++++ main/config.c	(working copy)
+@@ -1469,6 +1469,39 @@
+ 	return res;
+ }
+ 
++int ast_store_realtime(const char *family, ...) {
++	struct ast_config_engine *eng;
++	int res = -1;
++	char db[256]="";
++	char table[256]="";
++	va_list ap;
++
++	va_start(ap, family);
++	eng = find_engine(family, db, sizeof(db), table, sizeof(table));
++	if (eng && eng->store_func) 
++		res = eng->store_func(db, table, ap);
++	va_end(ap);
++
++	return res;
++}
++
++int ast_destroy_realtime(const char *family, const char *keyfield, const char *lookup, ...) {
++	struct ast_config_engine *eng;
++	int res = -1;
++	char db[256]="";
++	char table[256]="";
++	va_list ap;
++
++	va_start(ap, lookup);
++	eng = find_engine(family, db, sizeof(db), table, sizeof(table));
++	if (eng && eng->destroy_func) 
++		res = eng->destroy_func(db, table, keyfield, lookup, ap);
++	va_end(ap);
++
++	return res;
++}
++
++
+ static int config_command(int fd, int argc, char **argv) 
+ {
+ 	struct ast_config_engine *eng;

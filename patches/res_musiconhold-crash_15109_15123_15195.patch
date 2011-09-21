@@ -1,0 +1,14 @@
+--- res/res_musiconhold.c	(revisión: 201599)
++++ res/res_musiconhold.c	(revisión: 201600)
+@@ -1103,9 +1103,10 @@
+ 	while ((member = AST_LIST_REMOVE_HEAD(&class->members, list))) {
+ 		free(member);
+ 	}
+-	
++
+ 	if (class->thread) {
+ 		pthread_cancel(class->thread);
++		pthread_join(class->thread, NULL);
+ 		class->thread = AST_PTHREADT_NULL;
+ 	}
+ 
