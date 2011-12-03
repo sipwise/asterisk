@@ -1,0 +1,379 @@
+--- channels/chan_dahdi.c	(revisión: 37)
++++ channels/chan_dahdi.c	(copia de trabajo)
+@@ -175,6 +175,8 @@
+ #define SIG_FXOGS	DAHDI_SIG_FXOGS
+ #define SIG_FXOKS	DAHDI_SIG_FXOKS
+ #define SIG_PRI		DAHDI_SIG_CLEAR
++#define SIG_BRI		(0x2000000 | DAHDI_SIG_CLEAR)
++#define SIG_BRI_PTMP	(0X4000000 | DAHDI_SIG_CLEAR)
+ #define	SIG_SF		DAHDI_SIG_SF
+ #define SIG_SFWINK 	(0x0100000 | DAHDI_SIG_SF)
+ #define SIG_SF_FEATD	(0x0200000 | DAHDI_SIG_SF)
+@@ -342,8 +344,10 @@
+ #ifdef HAVE_PRI_INBANDDISCONNECT
+ 	unsigned int inbanddisconnect:1;				/*!< Should we support inband audio after receiving DISCONNECT? */
+ #endif
++	unsigned int bri_l1_check:1;			/*!< Whether we should ignore the l1 up/down events on a BRI port */ 
+ 	time_t lastreset;						/*!< time when unused channels were last reset */
+ 	long resetinterval;						/*!< Interval (in seconds) for resetting unused channels */
++	int sig;
+ 	struct dahdi_pvt *pvts[MAX_CHANNELS];				/*!< Member channel pvt structs */
+ 	struct dahdi_pvt *crvs;						/*!< Member CRV structs */
+ 	struct dahdi_pvt *crvend;						/*!< Pointer to end of CRV structs */
+@@ -928,6 +932,7 @@
+ 			.privateprefix = "",
+ 			.unknownprefix = "",
+ 
++			.bri_l1_check = -1,
+ 			.resetinterval = 3600
+ 		},
+ #endif
+@@ -1358,7 +1363,8 @@
+ 		goto out;
+ 
+ #ifdef HAVE_PRI
+-	if ((pvt->sig == SIG_PRI) && (chan->_state == AST_STATE_DIALING) && !pvt->proceeding) {
++	if (((pvt->sig == SIG_PRI) || (pvt->sig == SIG_BRI) || (pvt->sig == SIG_BRI_PTMP)) 
++			&& (chan->_state == AST_STATE_DIALING) && !pvt->proceeding) {
+ 		if (pvt->setup_ack) {
+ 			if (!pri_grab(pvt, pvt->pri)) {
+ 				pri_information(pvt->pri->pri, pvt->call, digit);
+@@ -1420,7 +1426,8 @@
+ 
+ #ifdef HAVE_PRI
+ 	/* This means that the digit was already sent via PRI signalling */
+-	if (pvt->sig == SIG_PRI && !pvt->begindigit)
++	if (((pvt->sig == SIG_PRI) || (pvt->sig == SIG_BRI) || (pvt->sig == SIG_BRI_PTMP))
++			&& !pvt->begindigit)
+ 		goto out;
+ #endif
+ 
+@@ -1540,6 +1547,10 @@
+ 		return "FXO Kewlstart";
+ 	case SIG_PRI:
+ 		return "ISDN PRI";
++	case SIG_BRI:
++		return "ISDN BRI Point to Point";
++	case SIG_BRI_PTMP:
++		return "ISDN BRI Point to MultiPoint";
+ 	case SIG_SF:
+ 		return "SF (Tone) Immediate";
+ 	case SIG_SFWINK:
+@@ -1764,7 +1775,7 @@
+ 		return;
+ 	}
+ 	if (p->echocancel) {
+-		if (p->sig == SIG_PRI) {
++		if ((p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP) || (p->sig == SIG_PRI)) {
+ 			x = 1;
+ 			res = ioctl(p->subs[SUB_REAL].dfd, DAHDI_AUDIOMODE, &x);
+ 			if (res)
+@@ -1972,7 +1983,8 @@
+ {
+ 	int x, y, res;
+ 	x = muted;
+-	if (p->sig == SIG_PRI) {
++	if ((p->sig == SIG_PRI) || (p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP)) {
++
+ 		y = 1;
+ 		res = ioctl(p->subs[SUB_REAL].dfd, DAHDI_AUDIOMODE, &y);
+ 		if (res)
+@@ -2380,6 +2392,8 @@
+ 		ast_setstate(ast, AST_STATE_UP);
+ 		break;		
+ 	case SIG_PRI:
++ 	case SIG_BRI:
++ 	case SIG_BRI_PTMP:
+ 		/* We'll get it in a moment -- but use dialdest to store pre-setup_ack digits */
+ 		p->dialdest[0] = '\0';
+ 		break;
+@@ -2818,7 +2832,7 @@
+ 	
+ 	index = dahdi_get_index(ast, p, 1);
+ 
+-	if (p->sig == SIG_PRI) {
++	if ((p->sig == SIG_PRI) || (p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP)) {
+ 		x = 1;
+ 		ast_channel_setoption(ast,AST_OPTION_AUDIO_MODE,&x,sizeof(char),0);
+ 	}
+@@ -3025,7 +3039,7 @@
+ 			}
+ 		}
+ #endif
+-		if (p->sig && (p->sig != SIG_PRI))
++		if (p->sig && ((p->sig != SIG_PRI) && (p->sig != SIG_BRI) && (p->sig != SIG_BRI_PTMP)))
+ 			res = dahdi_set_hook(p->subs[SUB_REAL].dfd, DAHDI_ONHOOK);
+ 		if (res < 0) {
+ 			ast_log(LOG_WARNING, "Unable to hangup line %s\n", ast->name);
+@@ -3076,7 +3090,7 @@
+ 		update_conf(p);
+ 		reset_conf(p);
+ 		/* Restore data mode */
+-		if (p->sig == SIG_PRI) {
++		if ((p->sig == SIG_PRI) || (p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP)) {
+ 			x = 0;
+ 			ast_channel_setoption(ast,AST_OPTION_AUDIO_MODE,&x,sizeof(char),0);
+ 		}
+@@ -3193,6 +3207,8 @@
+ 		break;
+ #ifdef HAVE_PRI
+ 	case SIG_PRI:
++ 	case SIG_BRI:
++ 	case SIG_BRI_PTMP:
+ 		/* Send a pri acknowledge */
+ 		if (!pri_grab(p, p->pri)) {
+ 			p->proceeding = 1;
+@@ -4135,7 +4151,7 @@
+ 
+ 		ast_log(LOG_DEBUG, "Detected %sdigit '%c'\n", p->pulsedial ? "pulse ": "", res & 0xff);
+ #ifdef HAVE_PRI
+-		if (!p->proceeding && p->sig == SIG_PRI && p->pri && p->pri->overlapdial) {
++		if (!p->proceeding && ((p->sig == SIG_PRI) || (p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP)) && p->pri && p->pri->overlapdial) {
+ 			/* absorb event */
+ 		} else {
+ #endif
+@@ -4223,22 +4239,24 @@
+ 			break;
+ 		case DAHDI_EVENT_ALARM:
+ #ifdef HAVE_PRI
+-			if (!p->pri || !p->pri->pri || (pri_get_timer(p->pri->pri, PRI_TIMER_T309) < 0)) {
+-				/* T309 is not enabled : hangup calls when alarm occurs */
+-				if (p->call) {
+-					if (p->pri && p->pri->pri) {
+-						if (!pri_grab(p, p->pri)) {
+-							pri_hangup(p->pri->pri, p->call, -1);
+-							pri_destroycall(p->pri->pri, p->call);
+-							p->call = NULL;
+-							pri_rel(p->pri);
++			if ((p->sig == SIG_PRI) || (p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP)) {
++				if (!p->pri || !p->pri->pri || (pri_get_timer(p->pri->pri, PRI_TIMER_T309) < 0)) {
++					/* T309 is not enabled : hangup calls when alarm occurs */
++					if (p->call) {
++						if (p->pri && p->pri->pri) {
++							if (!pri_grab(p, p->pri)) {
++								pri_hangup(p->pri->pri, p->call, -1);
++								pri_destroycall(p->pri->pri, p->call);
++								p->call = NULL;
++								pri_rel(p->pri);
++							} else
++								ast_log(LOG_WARNING, "Failed to grab PRI!\n");
+ 						} else
+-							ast_log(LOG_WARNING, "Failed to grab PRI!\n");
+-					} else
+-						ast_log(LOG_WARNING, "The PRI Call has not been destroyed\n");
++							ast_log(LOG_WARNING, "The PRI Call has not been destroyed\n");
++					}
++					if (p->owner)
++						p->owner->_softhangup |= AST_SOFTHANGUP_DEV;
+ 				}
+-				if (p->owner)
+-					p->owner->_softhangup |= AST_SOFTHANGUP_DEV;
+ 			}
+ 			if (p->bearer)
+ 				p->bearer->inalarm = 1;
+@@ -5320,7 +5338,7 @@
+ 				}
+ 			} else if (f->frametype == AST_FRAME_DTMF) {
+ #ifdef HAVE_PRI
+-				if (!p->proceeding && p->sig==SIG_PRI && p->pri && p->pri->overlapdial) {
++				if (!p->proceeding && ((p->sig == SIG_PRI) || (p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP)) && p->pri && p->pri->overlapdial) {
+ 					/* Don't accept in-band DTMF when in overlap dial mode */
+ 					f->frametype = AST_FRAME_NULL;
+ 					f->subclass = 0;
+@@ -5464,11 +5482,11 @@
+ 		switch (condition) {
+ 		case AST_CONTROL_BUSY:
+ #ifdef HAVE_PRI
+-			if (p->priindication_oob && p->sig == SIG_PRI) {
++			if (p->priindication_oob && ((p->sig == SIG_PRI) || (p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP))) {
+ 				chan->hangupcause = AST_CAUSE_USER_BUSY;
+ 				chan->_softhangup |= AST_SOFTHANGUP_DEV;
+ 				res = 0;
+-			} else if (!p->progress && p->sig==SIG_PRI && p->pri && !p->outgoing) {
++			} else if (!p->progress && ((p->sig == SIG_PRI) || (p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP)) && p->pri && !p->outgoing) {
+ 				if (p->pri->pri) {		
+ 					if (!pri_grab(p, p->pri)) {
+ 						pri_progress(p->pri->pri,p->call, PVT_TO_CHANNEL(p), 1);
+@@ -5485,7 +5503,7 @@
+ 			break;
+ 		case AST_CONTROL_RINGING:
+ #ifdef HAVE_PRI
+-			if ((!p->alerting) && p->sig==SIG_PRI && p->pri && !p->outgoing && (chan->_state != AST_STATE_UP)) {
++			if ((!p->alerting) && ((p->sig == SIG_PRI) || (p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP)) && p->pri && !p->outgoing && (chan->_state != AST_STATE_UP)) {
+ 				if (p->pri->pri) {		
+ 					if (!pri_grab(p, p->pri)) {
+ 						pri_acknowledge(p->pri->pri,p->call, PVT_TO_CHANNEL(p), !p->digital);
+@@ -5509,7 +5527,7 @@
+ 		case AST_CONTROL_PROCEEDING:
+ 			ast_log(LOG_DEBUG,"Received AST_CONTROL_PROCEEDING on %s\n",chan->name);
+ #ifdef HAVE_PRI
+-			if (!p->proceeding && p->sig==SIG_PRI && p->pri && !p->outgoing) {
++			if (!p->proceeding && ((p->sig == SIG_PRI) || (p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP)) && p->pri && !p->outgoing) {
+ 				if (p->pri->pri) {		
+ 					if (!pri_grab(p, p->pri)) {
+ 						pri_proceeding(p->pri->pri,p->call, PVT_TO_CHANNEL(p), !p->digital);
+@@ -5528,7 +5546,7 @@
+ 			ast_log(LOG_DEBUG,"Received AST_CONTROL_PROGRESS on %s\n",chan->name);
+ #ifdef HAVE_PRI
+ 			p->digital = 0;	/* Digital-only calls isn't allows any inband progress messages */
+-			if (!p->progress && p->sig==SIG_PRI && p->pri && !p->outgoing) {
++			if (!p->progress && ((p->sig == SIG_PRI) || (p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP)) && p->pri && !p->outgoing) {
+ 				if (p->pri->pri) {		
+ 					if (!pri_grab(p, p->pri)) {
+ 						pri_progress(p->pri->pri,p->call, PVT_TO_CHANNEL(p), 1);
+@@ -5546,11 +5564,11 @@
+ 		case AST_CONTROL_CONGESTION:
+ 			chan->hangupcause = AST_CAUSE_CONGESTION;
+ #ifdef HAVE_PRI
+-			if (p->priindication_oob && p->sig == SIG_PRI) {
++			if (p->priindication_oob && ((p->sig == SIG_PRI) || (p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP))) {
+ 				chan->hangupcause = AST_CAUSE_SWITCH_CONGESTION;
+ 				chan->_softhangup |= AST_SOFTHANGUP_DEV;
+ 				res = 0;
+-			} else if (!p->progress && p->sig==SIG_PRI && p->pri && !p->outgoing) {
++			} else if (!p->progress && ((p->sig == SIG_PRI) || (p->sig == SIG_BRI) || (p->sig == SIG_BRI_PTMP)) && p->pri && !p->outgoing) {
+ 				if (p->pri) {		
+ 					if (!pri_grab(p, p->pri)) {
+ 						pri_progress(p->pri->pri,p->call, PVT_TO_CHANNEL(p), 1);
+@@ -5726,7 +5744,7 @@
+ 				i->dsp_features = features;
+ #ifdef HAVE_PRI
+ 				/* We cannot do progress detection until receives PROGRESS message */
+-				if (i->outgoing && (i->sig == SIG_PRI)) {
++				if (i->outgoing && ((i->sig == SIG_PRI) || (i->sig == SIG_BRI) || (i->sig == SIG_BRI_PTMP))) {
+ 					/* Remember requested DSP features, don't treat
+ 					   talking as ANSWER */
+ 					i->dsp_features = features & ~DSP_PROGRESS_TALK;
+@@ -5904,6 +5922,8 @@
+ 	switch (p->sig) {
+ #ifdef HAVE_PRI
+ 	case SIG_PRI:
++	case SIG_BRI:
++	case SIG_BRI_PTMP:
+ 		/* Now loop looking for an extension */
+ 		ast_copy_string(exten, p->exten, sizeof(exten));
+ 		len = strlen(exten);
+@@ -7192,6 +7212,8 @@
+ 			dahdi_set_hook(i->subs[SUB_REAL].dfd, DAHDI_ONHOOK);
+ 			break;
+ 		case SIG_PRI:
++		case SIG_BRI:
++		case SIG_BRI_PTMP:
+ 			dahdi_disable_ec(i);
+ 			res = tone_zone_play_tone(i->subs[SUB_REAL].dfd, -1);
+ 			break;
+@@ -7687,13 +7709,14 @@
+ 				}
+ 			}
+ #ifdef HAVE_PRI
+-			if ((chan_sig == SIG_PRI) || (chan_sig == SIG_GR303FXOKS) || (chan_sig == SIG_GR303FXSKS)) {
++			if ((chan_sig == SIG_PRI) || (chan_sig == SIG_BRI) || (chan_sig == SIG_BRI_PTMP) || (chan_sig == SIG_GR303FXOKS) || (chan_sig == SIG_GR303FXSKS)) {
+ 				int offset;
+ 				int myswitchtype;
+ 				int matchesdchan;
+ 				int x,y;
+ 				offset = 0;
+-				if ((chan_sig == SIG_PRI) && ioctl(tmp->subs[SUB_REAL].dfd, DAHDI_AUDIOMODE, &offset)) {
++				if (((chan_sig == SIG_PRI) || (chan_sig == SIG_BRI) || (chan_sig == SIG_BRI_PTMP))
++						&& ioctl(tmp->subs[SUB_REAL].dfd, DAHDI_AUDIOMODE, &offset)) {
+ 					ast_log(LOG_ERROR, "Unable to set clear mode on clear channel %d of span %d: %s\n", channel, p.spanno, strerror(errno));
+ 					destroy_dahdi_pvt(&tmp);
+ 					return NULL;
+@@ -7718,7 +7741,9 @@
+ 						destroy_dahdi_pvt(&tmp);
+ 						return NULL;
+ 					}
+-					if (chan_sig == SIG_PRI)
++					if ((chan_sig == SIG_PRI) ||
++							(chan_sig == SIG_BRI) ||
++							(chan_sig == SIG_BRI_PTMP))
+ 						myswitchtype = conf->pri.switchtype;
+ 					else
+ 						myswitchtype = PRI_SWITCH_GR303_TMC;
+@@ -7775,6 +7800,7 @@
+ 							destroy_dahdi_pvt(&tmp);
+ 							return NULL;
+ 						}
++						pris[span].sig = chan_sig;
+ 						pris[span].nodetype = conf->pri.nodetype;
+ 						pris[span].switchtype = myswitchtype;
+ 						pris[span].nsf = conf->pri.nsf;
+@@ -7784,6 +7810,8 @@
+ 						pris[span].minunused = conf->pri.minunused;
+ 						pris[span].minidle = conf->pri.minidle;
+ 						pris[span].overlapdial = conf->pri.overlapdial;
++						pris[span].bri_l1_check = ((SIG_BRI == chan_sig) | (SIG_BRI_PTMP == chan_sig))
++									 ? conf->pri.bri_l1_check : 1; 
+ #ifdef HAVE_PRI_INBANDDISCONNECT
+ 						pris[span].inbanddisconnect = conf->pri.inbanddisconnect;
+ #endif
+@@ -7995,7 +8023,7 @@
+ 				ast_dsp_digitmode(tmp->dsp, DSP_DIGITMODE_DTMF | tmp->dtmfrelax);
+ 			update_conf(tmp);
+ 			if (!here) {
+-				if (chan_sig != SIG_PRI)
++				if ((chan_sig != SIG_BRI) && (chan_sig != SIG_BRI_PTMP) && (chan_sig != SIG_PRI))
+ 					/* Hang it up to be sure it's good */
+ 					dahdi_set_hook(tmp->subs[SUB_REAL].dfd, DAHDI_ONHOOK);
+ 			}
+@@ -9056,7 +9084,7 @@
+ 						ast_verbose(VERBOSE_PREFIX_2 "%s D-Channel on span %d up\n", pri_order(which), pri->span);
+ 				}
+ 				pri->dchanavail[which] |= DCHAN_UP;
+-			} else {
++			} else if (pri->bri_l1_check) { 
+ 				if (pri->dchanavail[which] & DCHAN_UP) {
+ 					if (option_verbose > 1) 
+ 						ast_verbose(VERBOSE_PREFIX_2 "%s D-Channel on span %d down\n", pri_order(which), pri->span);
+@@ -9993,7 +10021,16 @@
+ 			dahdi_close_pri_fd(pri, i);
+ 			return -1;
+ 		}
+-		pri->dchans[i] = pri_new(pri->fds[i], pri->nodetype, pri->switchtype);
++		switch (pri->sig) {
++			case SIG_BRI:
++				pri->dchans[i] = pri_new_bri(pri->fds[i], 1, pri->nodetype, pri->switchtype);
++				break;
++			case SIG_BRI_PTMP:
++				pri->dchans[i] = pri_new_bri(pri->fds[i], 0, pri->nodetype, pri->switchtype);
++				break;
++			default:
++				pri->dchans[i] = pri_new(pri->fds[i], pri->nodetype, pri->switchtype);
++		}
+ 		/* Force overlap dial if we're doing GR-303! */
+ 		if (pri->switchtype == PRI_SWITCH_GR303_TMC)
+ 			pri->overlapdial = 1;
+@@ -11526,6 +11563,10 @@
+ 			confp->chan.hanguponpolarityswitch = ast_true(v->value);
+ 		} else if (!strcasecmp(v->name, "sendcalleridafter")) {
+ 			confp->chan.sendcalleridafter = atoi(v->value);
++#ifdef HAVE_PRI
++		} else if (!strcasecmp(v->name, "bri_l1_check")) {
++			confp->pri.bri_l1_check = ast_true(v->value);
++#endif		 
+ 		} else if (reload != 1){ 
+ 			 if (!strcasecmp(v->name, "signalling")) {
+ 				confp->chan.outsigmod = -1;
+@@ -11638,6 +11679,22 @@
+ 					confp->chan.sig = SIG_PRI;
+ 					confp->chan.radio = 0;
+ 					confp->pri.nodetype = PRI_CPE;
++				} else if (!strcasecmp(v->value, "bri_cpe")) {
++					confp->chan.sig = SIG_BRI;
++					confp->chan.radio = 0;
++					confp->pri.nodetype = PRI_CPE;
++				} else if (!strcasecmp(v->value, "bri_net")) {
++					confp->chan.sig = SIG_BRI;
++					confp->chan.radio = 0;
++					confp->pri.nodetype = PRI_NETWORK;
++				} else if (!strcasecmp(v->value, "bri_cpe_ptmp")) {
++					confp->chan.sig = SIG_BRI_PTMP;
++					confp->chan.radio = 0;
++					confp->pri.nodetype = PRI_CPE;
++				} else if (!strcasecmp(v->value, "bri_net_ptmp")) {
++					confp->chan.sig = SIG_BRI_PTMP;
++					confp->chan.radio = 0;
++					confp->pri.nodetype = PRI_NETWORK;
+ 				} else if (!strcasecmp(v->value, "gr303fxoks_net")) {
+ 					confp->chan.sig = SIG_GR303FXOKS;
+ 					confp->chan.radio = 0;

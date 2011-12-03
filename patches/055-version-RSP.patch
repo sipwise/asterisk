@@ -1,0 +1,50 @@
+--- build_tools/make_version_h	2007-02-23 19:59:09.000000000 +0100
++++ build_tools/make_version_h	2010-05-06 22:06:58.000000000 +0200
+@@ -1,5 +1,5 @@
+ #!/bin/sh
+-if [ ! -f ../.flavor ]; then
++if [ ! -f .flavor ]; then
+     cat << END
+ /*
+  * version.h 
+@@ -10,14 +10,14 @@
+ 
+ END
+ else
+-    aadkver=`cat ../.version`
+-    aadkflavor=`cat ../.flavor`
++    aadkver=`cat .version`
++    aadkflavor=`cat .flavor`
+     cat << END
+ /*
+  * version.h 
+  * Automatically generated
+  */
+-#define ASTERISK_VERSION "${ASTERISKVERSION} (${aadkflavor} ${aadkver})"
++#define ASTERISK_VERSION "${ASTERISKVERSION}-${aadkflavor}"
+ #define ASTERISK_VERSION_NUM ${ASTERISKVERSIONNUM}
+ 
+ END
+--- .flavor	1970-01-01 01:00:00.000000000 +0100
++++ .flavor	2010-05-06 22:05:31.000000000 +0200
+@@ -0,0 +1 @@
++RSP (Community supported branch)
+--- main/asterisk.c	2009-02-25 13:43:36.000000000 +0100
++++ main/asterisk.c	2010-05-06 22:05:31.000000000 +0200
+@@ -144,7 +144,15 @@
+ 	ast_verbose("This is free software, with components licensed under the GNU General Public\n"); \
+ 	ast_verbose("License version 2 and other licenses; you are welcome to redistribute it under\n"); \
+ 	ast_verbose("certain conditions. Type 'core show license' for details.\n"); \
+-	ast_verbose("=========================================================================\n")
++	ast_verbose("=========================================================================\n"); \
++	ast_verbose("\n"); \
++        ast_verbose("Versión RSP de Asterisk " ASTERISK_VERSION ", mantenida por la comunidad\n"); \
++        ast_verbose("Lista de correo de la versión RSP: http://groups.google.com/group/asterisk-es-rsp \n"); \
++        ast_verbose("Wiki de la versión RSP: http://www.asterisk-es-rsp.org \n"); \
++        ast_verbose("Rep. SVN Asterisk-rsp: http://asterisk-es-rsp.irontec.com/svn/asterisk-es-rsp/branches/ \n"); \
++        ast_verbose("Visor web del repositorio SVN: http://asterisk-es-rsp.irontec.com \n"); \
++        ast_verbose("\n"); \
++        ast_verbose("=========================================================================\n")
+ 
+ /*! \defgroup main_options Main Configuration Options
+  \brief Main configuration options from \ref Config_ast "asterisk.conf" or 

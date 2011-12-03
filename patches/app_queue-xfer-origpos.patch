@@ -1,0 +1,26 @@
+--- apps/app_queue.c	2009-02-20 10:40:46.000000000 +0100
++++ apps/app_queue.c	2009-02-20 10:44:28.000000000 +0100
+@@ -2687,9 +2687,9 @@
+ 	int callcompletedinsl = qtds->callcompletedinsl;
+ 	struct ast_datastore *datastore;
+ 
+-	ast_queue_log(qe->parent->name, qe->chan->uniqueid, member->membername, "TRANSFER", "%s|%s|%ld|%ld",
++	ast_queue_log(qe->parent->name, qe->chan->uniqueid, member->membername, "TRANSFER", "%s|%s|%ld|%ld|%d",
+ 				new_chan->exten, new_chan->context, (long) (callstart - qe->start),
+-				(long) (time(NULL) - callstart));
++				(long) (time(NULL) - callstart), qe->opos);
+ 
+ 	update_queue(qe->parent, member, callcompletedinsl);
+ 	
+@@ -3240,9 +3240,9 @@
+ 		if (!attended_transfer_occurred(qe->chan)) {
+ 			struct ast_datastore *tds;
+ 			if (strcasecmp(oldcontext, qe->chan->context) || strcasecmp(oldexten, qe->chan->exten)) {
+-				ast_queue_log(queuename, qe->chan->uniqueid, member->membername, "TRANSFER", "%s|%s|%ld|%ld",
++				ast_queue_log(queuename, qe->chan->uniqueid, member->membername, "TRANSFER", "%s|%s|%ld|%ld|%d",
+ 					qe->chan->exten, qe->chan->context, (long) (callstart - qe->start),
+-					(long) (time(NULL) - callstart));
++					(long) (time(NULL) - callstart), qe->opos);
+ 			} else if (qe->chan->_softhangup) {
+ 				ast_queue_log(queuename, qe->chan->uniqueid, member->membername, "COMPLETECALLER", "%ld|%ld|%d",
+ 					(long) (callstart - qe->start), (long) (time(NULL) - callstart), qe->opos);

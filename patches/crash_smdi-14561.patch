@@ -1,0 +1,13 @@
+--- res/res_smdi.c	(revisión: 198310)
++++ res/res_smdi.c	(revisión: 198311)
+@@ -309,8 +309,10 @@
+ 	switch (type) {
+ 	case SMDI_MWI:
+ 		ASTOBJ_UNREF(mwi_msg, ast_smdi_mwi_message_destroy);
++		break;
+ 	case SMDI_MD:
+ 		ASTOBJ_UNREF(md_msg, ast_smdi_md_message_destroy);
++		break;
+ 	}
+ }
+ 

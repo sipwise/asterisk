@@ -1,0 +1,33 @@
+--- apps/app_queue.c	(revisión: 137)
++++ apps/app_queue.c	(copia de trabajo)
+@@ -120,7 +120,8 @@
+ 	QUEUE_STRATEGY_FEWESTCALLS,
+ 	QUEUE_STRATEGY_RANDOM,
+ 	QUEUE_STRATEGY_RRMEMORY,
+-	QUEUE_STRATEGY_LINEAR
++	QUEUE_STRATEGY_LINEAR,
++	QUEUE_STRATEGY_WRANDOM
+ };
+ 
+ static struct strategy {
+@@ -133,7 +134,8 @@
+ 	{ QUEUE_STRATEGY_FEWESTCALLS, "fewestcalls" },
+ 	{ QUEUE_STRATEGY_RANDOM, "random" },
+ 	{ QUEUE_STRATEGY_RRMEMORY, "rrmemory" },
+-	{ QUEUE_STRATEGY_LINEAR, "linear" }
++	{ QUEUE_STRATEGY_LINEAR, "linear" },
++	{ QUEUE_STRATEGY_WRANDOM, "wrandom"},
+ };
+ 
+ #define DEFAULT_RETRY		5
+@@ -2731,6 +2733,10 @@
+ 		tmp->metric = ast_random() % 1000;
+ 		tmp->metric += mem->penalty * 1000000;
+ 		break;
++	case QUEUE_STRATEGY_WRANDOM:
++		tmp->metric = ast_random() % ((1 + mem->penalty) * 1000);
++		ast_log(LOG_DEBUG,"calc_metric() Calculated metric %d for member %s (penalty %d)\n",tmp->metric,mem->membername,mem->penalty);
++		break;
+ 	case QUEUE_STRATEGY_FEWESTCALLS:
+ 		tmp->metric = mem->calls;
+ 		tmp->metric += mem->penalty * 1000000;
