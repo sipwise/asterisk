@@ -3,7 +3,7 @@ Section: comm
 Priority: extra
 Maintainer: Sipwise Development Team <support@sipwise.com>
 Build-Depends: debhelper (>= 7), autotools-dev, libssl-dev, libncurses-dev, libltdl-dev, unixodbc-dev
-Standards-Version: 3.7.3
+Standards-Version: 3.9.2
 
 Package: ngcp-asterisk
 Architecture: any
