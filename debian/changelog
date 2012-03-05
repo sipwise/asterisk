@@ -1,3 +1,13 @@
+ngcp-asterisk (1.4.24.1-rsp+svn4100.2) unstable; urgency=low
+
+  [ mprokop ]
+  * control: Set Maintainer field to Sipwise Development Team
+  * control: Bump Standards-Version to 3.9.2
+  * copyright: Get debian/copyright into better shape
+  * rules: debian/rules: add dh_installchangelogs and drop commented out dh_* commands
+
+ -- Andrew Pogrebennyk <apogrebennyk@sipwise.com>  Mon, 05 Mar 2012 15:44:19 +0100
+
 ngcp-asterisk (1.4.24.1-rsp+svn4100.1) unstable; urgency=low
 
   [ Jon Bonilla ]
