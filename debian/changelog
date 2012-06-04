@@ -1,3 +1,11 @@
+ngcp-asterisk (1.4.24.1-rsp+svn4100.3) unstable; urgency=low
+
+  [ jbonilla ]
+  * voicemail: Export main E164 number as VM_MAILBOX
+  * voicemail: Export UUID as VM_UUID
+
+ -- Jon Bonilla <jbonilla@sipwise.com>  Mon, 04 Jun 2012 15:44:19 +0100
+
 ngcp-asterisk (1.4.24.1-rsp+svn4100.2) unstable; urgency=low
 
   [ mprokop ]
