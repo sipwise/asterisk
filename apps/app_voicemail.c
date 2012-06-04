@@ -3013,7 +3013,10 @@ static void prep_email_sub_vars(struct ast_channel *ast, struct ast_vm_user *vmu
 	snprintf(passdata, passdatasize, "%d", msgnum);
 	pbx_builtin_setvar_helper(ast, "VM_MSGNUM", passdata);
 	pbx_builtin_setvar_helper(ast, "VM_CONTEXT", context);
-	pbx_builtin_setvar_helper(ast, "VM_MAILBOX", mailbox);
+	/* Manwe let's set E164 to VM_MAILBOX and create a new var VM_UUID*/
+	pbx_builtin_setvar_helper(ast, "VM_MAILBOX", vmu->dialed_num);
+	pbx_builtin_setvar_helper(ast, "VM_UUID", mailbox);
+	/* End Manwe */
 	pbx_builtin_setvar_helper(ast, "VM_CALLERID", (!ast_strlen_zero(cidname) || !ast_strlen_zero(cidnum)) ?
 		ast_callerid_merge(callerid, sizeof(callerid), cidname, cidnum, NULL) : "an unknown caller");
 	pbx_builtin_setvar_helper(ast, "VM_CIDNAME", (!ast_strlen_zero(cidname) ? cidname : "an unknown caller"));
