@@ -68,7 +68,7 @@ case "$1" in
   start)
 	# Check if Asterisk is already running.  If it is, then bug out, because
 	# starting up Asterisk when Asterisk is already running is very bad.
-	VERSION=`${DAEMON} -rx 'core show version' || ${TRUE}`
+	VERSION=`${DAEMON} -nrx 'core show version' || ${TRUE}`
 	if [ "`echo $VERSION | cut -c 1-8`" = "Asterisk" ]; then
 		echo "Asterisk is already running.  $0 will exit now."
 		exit 1
@@ -93,7 +93,7 @@ case "$1" in
 	;;
   reload)
 	echo "Reloading $DESC configuration files."
-	$DAEMON -rx 'reload' > /dev/null 2> /dev/null
+	$DAEMON -nrx 'reload' > /dev/null 2> /dev/null
 	;;
   restart|force-reload)
 	$0 stop
