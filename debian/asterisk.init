@@ -81,6 +81,7 @@ case "$1" in
         if [ $AST_GROUP ] ; then
                 ASTARGS="$ASTARGS -G $AST_GROUP"
         fi
+	ASTARGS="$ASTARGS -n"
 	# "start-stop-daemon --oknodo" returns 0 even if Asterisk was already running (as LSB expects):
 	start-stop-daemon --start --oknodo --exec $DAEMON -- $ASTARGS
 	log_end_msg $?
