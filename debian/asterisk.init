@@ -66,14 +66,6 @@ fi
 
 case "$1" in
   start)
-	# Check if Asterisk is already running.  If it is, then bug out, because
-	# starting up Asterisk when Asterisk is already running is very bad.
-	VERSION=`${DAEMON} -nrx 'core show version' || ${TRUE}`
-	if [ "`echo $VERSION | cut -c 1-8`" = "Asterisk" ]; then
-		echo "Asterisk is already running.  $0 will exit now."
-		exit 1
-	fi
-
 	log_begin_msg "Starting $DESC: $NAME"
         if [ $AST_USER ] ; then
                 ASTARGS="-U $AST_USER"
