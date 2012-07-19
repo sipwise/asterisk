@@ -64,8 +64,17 @@ fi
 # Use the LSB standar functions for services management
 . /lib/lsb/init-functions
 
+
+status() {
+        status_of_proc  "$DAEMON" "$NAME" && return 0 || return $?
+}
+
 case "$1" in
   start)
+	if status > /dev/null; then
+                echo "$DESC is already running. Use restart."
+                exit 0
+        fi
 	log_begin_msg "Starting $DESC: $NAME"
         if [ $AST_USER ] ; then
                 ASTARGS="-U $AST_USER"
@@ -95,7 +104,8 @@ case "$1" in
 	# "restart|force-reload" starts Asterisk and returns 0 even if Asterisk was stopped (as LSB expects).
 	;;
   status)
-       status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
+        status
+        exit $?
        ;;
   *)
 	N=/etc/init.d/$NAME
