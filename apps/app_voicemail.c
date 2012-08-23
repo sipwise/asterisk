@@ -2526,15 +2526,15 @@ static void copy_file(char *sdir, int smsg, char *ddir, int dmsg, char *dmailbox
 	char msgnums[20];
 	char msgnumd[20];
 	struct odbc_obj *obj;
-	char *argv[] = { ddir, msgnumd, dmailboxuser, dmailboxcontext, sdir, msgnums };
-	struct generic_prepare_struct gps = { .sql = sql, .argc = 6, .argv = argv };
+	char *argv[] = { ddir, msgnumd, dmailboxcontext, sdir, msgnums };
+	struct generic_prepare_struct gps = { .sql = sql, .argc = 5, .argv = argv };
 
 	delete_file(ddir, dmsg);
 	obj = ast_odbc_request_obj(odbc_database, 0);
 	if (obj) {
 		snprintf(msgnums, sizeof(msgnums), "%d", smsg);
 		snprintf(msgnumd, sizeof(msgnumd), "%d", dmsg);
-		snprintf(sql, sizeof(sql), "INSERT INTO %s (dir, msgnum, context, macrocontext, callerid, origtime, duration, recording, mailboxuser, mailboxcontext) SELECT ?,?,context,macrocontext,callerid,origtime,duration,recording,?,? FROM %s WHERE dir=? AND msgnum=?",odbc_table,odbc_table);
+		snprintf(sql, sizeof(sql), "INSERT INTO %s (dir, msgnum, context, macrocontext, callerid, origtime, duration, recording, mailboxuser, mailboxcontext) SELECT ?,?,context,macrocontext,callerid,origtime,duration,recording,mailboxuser,? FROM %s WHERE dir=? AND msgnum=?",odbc_table,odbc_table);
 		stmt = ast_odbc_prepare_and_execute(obj, generic_prepare, &gps);
 		if (!stmt)
 			ast_log(LOG_WARNING, "SQL Execute error!\n[%s] (You probably don't have MySQL 4.1 or later installed)\n\n", sql);
