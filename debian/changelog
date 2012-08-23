@@ -2,6 +2,15 @@ ngcp-asterisk (1.4.24.1-rsp+svn4100.4) unstable; urgency=low
 
   [ agranig ]
   * voicemail: Fix bug in copying msg between folders within IVR.
+  * Use UUID as mailboxuser instead of the phone number.
+  *Supress console coloring when exec Ast-CLI commands.
+
+  [ Michael Prokop ]
+  * wrap and sort items in Debian packaging files
+  * Bump Standards-Version to 3.9.3
+
+  [ jbonilla ]
+  * Remove lsb uncompliant code
 
  -- Andreas Granig <agranig@sipwise.com>  Thu, 23 Aug 2012 16:49:49 +0200
 
