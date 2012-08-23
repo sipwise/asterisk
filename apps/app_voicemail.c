@@ -4370,7 +4370,7 @@ static int save_to_folder(struct ast_vm_user *vmu, struct vm_state *vms, int msg
 	}
 #else
 	char *dir = vms->curdir;
-	char *username = vms->username;
+	char *username = vmu->mailbox;
 	char *context = vmu->context;
 	char sfn[PATH_MAX];
 	char dfn[PATH_MAX];
