@@ -64,16 +64,17 @@ fi
 # Use the LSB standar functions for services management
 . /lib/lsb/init-functions
 
+
+status() {
+        status_of_proc  "$DAEMON" "$NAME" && return 0 || return $?
+}
+
 case "$1" in
   start)
-	# Check if Asterisk is already running.  If it is, then bug out, because
-	# starting up Asterisk when Asterisk is already running is very bad.
-	VERSION=`${DAEMON} -rx 'core show version' || ${TRUE}`
-	if [ "`echo $VERSION | cut -c 1-8`" = "Asterisk" ]; then
-		echo "Asterisk is already running.  $0 will exit now."
-		exit 1
-	fi
-
+	if status > /dev/null; then
+                echo "$DESC is already running. Use restart."
+                exit 0
+        fi
 	log_begin_msg "Starting $DESC: $NAME"
         if [ $AST_USER ] ; then
                 ASTARGS="-U $AST_USER"
@@ -81,6 +82,7 @@ case "$1" in
         if [ $AST_GROUP ] ; then
                 ASTARGS="$ASTARGS -G $AST_GROUP"
         fi
+	ASTARGS="$ASTARGS -n"
 	# "start-stop-daemon --oknodo" returns 0 even if Asterisk was already running (as LSB expects):
 	start-stop-daemon --start --oknodo --exec $DAEMON -- $ASTARGS
 	log_end_msg $?
@@ -93,7 +95,7 @@ case "$1" in
 	;;
   reload)
 	echo "Reloading $DESC configuration files."
-	$DAEMON -rx 'reload' > /dev/null 2> /dev/null
+	$DAEMON -nrx 'reload' > /dev/null 2> /dev/null
 	;;
   restart|force-reload)
 	$0 stop
@@ -102,7 +104,8 @@ case "$1" in
 	# "restart|force-reload" starts Asterisk and returns 0 even if Asterisk was stopped (as LSB expects).
 	;;
   status)
-       status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
+        status
+        exit $?
        ;;
   *)
 	N=/etc/init.d/$NAME

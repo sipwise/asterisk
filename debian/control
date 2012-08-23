@@ -2,11 +2,20 @@ Source: ngcp-asterisk
 Section: comm
 Priority: extra
 Maintainer: Sipwise Development Team <support@sipwise.com>
-Build-Depends: debhelper (>= 7), autotools-dev, libssl-dev, libncurses-dev, libltdl-dev, unixodbc-dev
-Standards-Version: 3.9.2
+Build-Depends: autotools-dev,
+               debhelper (>= 7),
+               libltdl-dev,
+               libncurses-dev,
+               libssl-dev,
+               unixodbc-dev
+Standards-Version: 3.9.3
 
 Package: ngcp-asterisk
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, unixodbc, ngcp-asterisk-sounds, libmyodbc
+Depends: libmyodbc,
+         ngcp-asterisk-sounds,
+         unixodbc,
+         ${misc:Depends},
+         ${shlibs:Depends}
 Description: Sipwise's custom asterisk for NGCP platforms.
  This package provides Asterisk 1.4.24.1 with Sipwise and asterisk-es-rsp.org patches.
