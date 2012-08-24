@@ -6672,7 +6672,7 @@ static int vm_intro(struct ast_channel *chan, struct ast_vm_user *vmu, struct vm
 	char prefile[256];
 	
 	/* Notify the user that the temp greeting is set and give them the option to remove it */
-	snprintf(prefile, sizeof(prefile), "%s%s/%s/temp", VM_SPOOL_DIR, vmu->context, vms->username);
+	snprintf(prefile, sizeof(prefile), "%s%s/%s/temp", VM_SPOOL_DIR, vmu->context, vmu->mailbox);
 	if (ast_test_flag(vmu, VM_TEMPGREETWARN)) {
 		RETRIEVE(prefile, -1, vmu);
 		if (ast_fileexists(prefile, NULL, NULL) > 0)
@@ -6825,7 +6825,7 @@ static int vm_newuser(struct ast_channel *chan, struct ast_vm_user *vmu, struct 
 
 	/* If forcename is set, have the user record their name */	
 	if (ast_test_flag(vmu, VM_FORCENAME)) {
-		snprintf(prefile,sizeof(prefile), "%s%s/%s/greet", VM_SPOOL_DIR, vmu->context, vms->username);
+		snprintf(prefile,sizeof(prefile), "%s%s/%s/greet", VM_SPOOL_DIR, vmu->context, vmu->mailbox);
 		if (ast_fileexists(prefile, NULL, NULL) < 1) {
 			cmd = play_record_review(chan, "vm-rec-name", prefile, maxgreet, fmtc, 0, vmu, &duration, NULL, record_gain, vms);
 			if (cmd < 0 || cmd == 't' || cmd == '#')
@@ -6835,14 +6835,14 @@ static int vm_newuser(struct ast_channel *chan, struct ast_vm_user *vmu, struct 
 
 	/* If forcegreetings is set, have the user record their greetings */
 	if (ast_test_flag(vmu, VM_FORCEGREET)) {
-		snprintf(prefile,sizeof(prefile), "%s%s/%s/unavail", VM_SPOOL_DIR, vmu->context, vms->username);
+		snprintf(prefile,sizeof(prefile), "%s%s/%s/unavail", VM_SPOOL_DIR, vmu->context, vmu->mailbox);
 		if (ast_fileexists(prefile, NULL, NULL) < 1) {
 			cmd = play_record_review(chan, "vm-rec-unv", prefile, maxgreet, fmtc, 0, vmu, &duration, NULL, record_gain, vms);
 			if (cmd < 0 || cmd == 't' || cmd == '#')
 				return cmd;
 		}
 
-		snprintf(prefile,sizeof(prefile), "%s%s/%s/busy", VM_SPOOL_DIR, vmu->context, vms->username);
+		snprintf(prefile,sizeof(prefile), "%s%s/%s/busy", VM_SPOOL_DIR, vmu->context, vmu->mailbox);
 		if (ast_fileexists(prefile, NULL, NULL) < 1) {
 			cmd = play_record_review(chan, "vm-rec-busy", prefile, maxgreet, fmtc, 0, vmu, &duration, NULL, record_gain, vms);
 			if (cmd < 0 || cmd == 't' || cmd == '#')
@@ -6938,7 +6938,7 @@ static int vm_options(struct ast_channel *chan, struct ast_vm_user *vmu, struct 
 			break;
 		default: 
 			cmd = 0;
-			snprintf(prefile, sizeof(prefile), "%s%s/%s/temp", VM_SPOOL_DIR, vmu->context, vms->username);
+			snprintf(prefile, sizeof(prefile), "%s%s/%s/temp", VM_SPOOL_DIR, vmu->context, vmu->mailbox);
 			RETRIEVE(prefile, -1, vmu);
 			if (ast_fileexists(prefile, NULL, NULL))
 				cmd = ast_play_and_wait(chan, "vm-tmpexists");
@@ -6978,8 +6978,8 @@ static int vm_tempgreeting(struct ast_channel *chan, struct ast_vm_user *vmu, st
 		ast_adsi_transmit_message(chan, buf, bytes, ADSI_MSG_DISPLAY);
 	}
 
-	snprintf(prefile, sizeof(prefile), "%s%s/%s/temp", VM_SPOOL_DIR, vmu->context, vms->username);
-	if ((res = create_dirpath(dest, sizeof(dest), vmu->context, vms->username, "temp"))) {
+	snprintf(prefile, sizeof(prefile), "%s%s/%s/temp", VM_SPOOL_DIR, vmu->context, vmu->mailbox);
+	if ((res = create_dirpath(dest, sizeof(dest), vmu->context, vmu->mailbox, "temp"))) {
 		ast_log(LOG_WARNING, "Failed to create directory (%s).\n", prefile);
 		return -1;
 	}

@@ -1,3 +1,10 @@
+ngcp-asterisk (1.4.24.1-rsp+svn4100.5) unstable; urgency=low
+
+  [ agranig ]
+  * Fix storing temporary greeting 
+
+ -- Jon Bonilla <jbonilla@sipwise.com>  Fri, 24 Aug 2012 17:05:15 +0200
+
 ngcp-asterisk (1.4.24.1-rsp+svn4100.4) unstable; urgency=low
 
   [ agranig ]
