@@ -1,3 +1,10 @@
+ngcp-asterisk (1.4.24.1+ngcp.1) unstable; urgency=low
+
+  * Non-maintainer upload, adjusting package version for native
+    packaging in Git.
+
+ -- Michael Prokop <mprokop@sipwise.com>  Tue, 07 May 2013 17:34:02 +0200
+
 ngcp-asterisk (1.4.24.1-rsp+svn4100.5) unstable; urgency=low
 
   [ agranig ]
