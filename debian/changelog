@@ -1,3 +1,9 @@
+ngcp-asterisk (1.4.24.1+ngcp.4) unstable; urgency=low
+
+  * [8e4a6e4] MT#5645 Fix "two" handling for ro language.
+
+ -- Andreas Granig <agranig@sipwise.com>  Tue, 14 Jan 2014 21:27:47 +0100
+
 ngcp-asterisk (1.4.24.1+ngcp.3) unstable; urgency=low
 
   * [7d964d9] MT#5645 Another ro language fix.
