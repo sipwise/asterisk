@@ -6125,7 +6125,7 @@ static int vm_intro_ro(struct ast_channel *chan, struct vm_state *vms)
 			ast_play_and_wait(chan, "vm-message") :
 			/* 2 or more new messages */
 			say_and_wait(chan, vms->newmessages, chan->language) ||
-			ast_play_and_wait(chan, "vm-INBOX") ||
+			ast_play_and_wait(chan, "vm-INBOXa") ||
 			ast_play_and_wait(chan, "vm-messages");
 		if (!res && vms->oldmessages)
 			res =	ast_play_and_wait(chan, "vm-and");
