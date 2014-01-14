@@ -1,3 +1,9 @@
+ngcp-asterisk (1.4.24.1+ngcp.3) unstable; urgency=low
+
+  * [7d964d9] MT#5645 Another ro language fix.
+
+ -- Andreas Granig <agranig@sipwise.com>  Tue, 14 Jan 2014 12:52:50 +0100
+
 ngcp-asterisk (1.4.24.1+ngcp.2) unstable; urgency=low
 
   * [c5494f2] MT#5645 Implement Romanian syntax.
