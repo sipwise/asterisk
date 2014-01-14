@@ -1,3 +1,9 @@
+ngcp-asterisk (1.4.24.1+ngcp.2) unstable; urgency=low
+
+  * [c5494f2] MT#5645 Implement Romanian syntax.
+
+ -- Andreas Granig <agranig@sipwise.com>  Tue, 14 Jan 2014 12:40:03 +0100
+
 ngcp-asterisk (1.4.24.1+ngcp.1) unstable; urgency=low
 
   [ Michael Prokop ]
