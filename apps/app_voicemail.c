@@ -6122,16 +6122,16 @@ static int vm_intro_ro(struct ast_channel *chan, struct vm_state *vms)
 		if(vms->newmessages == 1) {
 			res = 
 				ast_play_and_wait(chan, "digits/1a") ||
-				ast_play_and_wait(chan, "vm-INBOX") ||
-				ast_play_and_wait(chan, "vm-message");
+				ast_play_and_wait(chan, "vm-message") ||
+				ast_play_and_wait(chan, "vm-INBOX");
 		} else {
 			if(vms->newmessages == 2)
 				res = ast_play_and_wait(chan, "digits/2f");
 			else
 				res = say_and_wait(chan, vms->newmessages, chan->language);
 			if(!res)
-				res = ast_play_and_wait(chan, "vm-INBOXa") ||
-				      ast_play_and_wait(chan, "vm-messages");
+				res = ast_play_and_wait(chan, "vm-messages") ||
+				      ast_play_and_wait(chan, "vm-INBOXa");
 			
 		}
 		if (!res && vms->oldmessages)
@@ -6141,16 +6141,16 @@ static int vm_intro_ro(struct ast_channel *chan, struct vm_state *vms)
 		if(vms->oldmessages == 1) {
 			res = 
 				ast_play_and_wait(chan, "digits/1a") ||
-				ast_play_and_wait(chan, "vm-Old") ||
-				ast_play_and_wait(chan, "vm-message");
+				ast_play_and_wait(chan, "vm-message") ||
+				ast_play_and_wait(chan, "vm-Old");
 		} else {
 			if(vms->oldmessages == 2)
 				res = ast_play_and_wait(chan, "digits/2f");
 			else
 				res = say_and_wait(chan, vms->oldmessages, chan->language);
 			if(!res)
-				res = ast_play_and_wait(chan, "vm-Old") ||
-				      ast_play_and_wait(chan, "vm-messages");
+				res = ast_play_and_wait(chan, "vm-messages") ||
+				      ast_play_and_wait(chan, "vm-Old");
 			
 		}
 	}
