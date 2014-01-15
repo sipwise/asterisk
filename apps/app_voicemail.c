@@ -6138,14 +6138,21 @@ static int vm_intro_ro(struct ast_channel *chan, struct vm_state *vms)
 			res =	ast_play_and_wait(chan, "vm-and");
 	}
 	if (!res && vms->oldmessages) {
-		res = (vms->oldmessages == 1) ?
-			ast_play_and_wait(chan, "digits/1a") ||
-			ast_play_and_wait(chan, "vm-INBOX") ||
-			ast_play_and_wait(chan, "vm-message") :
-			/* 2 or more old messages */
-			say_and_wait(chan, vms->oldmessages, chan->language) ||
-			ast_play_and_wait(chan, "vm-INBOXa") ||
-			ast_play_and_wait(chan, "vm-messages");
+		if(vms->oldmessages == 1) {
+			res = 
+				ast_play_and_wait(chan, "digits/1a") ||
+				ast_play_and_wait(chan, "vm-Old") ||
+				ast_play_and_wait(chan, "vm-message");
+		} else {
+			if(vms->oldmessages == 2)
+				res = ast_play_and_wait(chan, "digits/2f");
+			else
+				res = say_and_wait(chan, vms->oldmessages, chan->language);
+			if(!res)
+				res = ast_play_and_wait(chan, "vm-Old") ||
+				      ast_play_and_wait(chan, "vm-messages");
+			
+		}
 	}
 	return res;
 }
