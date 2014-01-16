@@ -1,3 +1,9 @@
+ngcp-asterisk (1.4.24.1+ngcp.7) unstable; urgency=low
+
+  * [450c939] MT#5645 Fix time string for "ro" language.
+
+ -- Andreas Granig <agranig@sipwise.com>  Thu, 16 Jan 2014 15:40:36 +0100
+
 ngcp-asterisk (1.4.24.1+ngcp.6) unstable; urgency=low
 
   * [097731a] Reorder intro chunks for "ro" language.
