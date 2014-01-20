@@ -1,3 +1,9 @@
+ngcp-asterisk (1.4.24.1+ngcp.9) unstable; urgency=low
+
+  * [cc5a95c] MT#5645 Switch INBOXa and INBOX.
+
+ -- Andreas Granig <agranig@sipwise.com>  Mon, 20 Jan 2014 14:01:56 +0100
+
 ngcp-asterisk (1.4.24.1+ngcp.8) unstable; urgency=low
 
   * [3707f80] MT#5645 Fix path to vm-and for "ro" language.
