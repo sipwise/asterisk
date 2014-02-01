@@ -1,3 +1,9 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.2.1) unstable; urgency=low
+
+  * New release.
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Sat, 01 Feb 2014 19:35:13 +0100
+
 ngcp-asterisk (1.4.24.1+ngcp.9) unstable; urgency=low
 
   * [cc5a95c] MT#5645 Switch INBOXa and INBOX.
