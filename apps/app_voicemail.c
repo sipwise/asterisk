@@ -6115,7 +6115,8 @@ static int vm_intro_ro(struct ast_channel *chan, struct vm_state *vms)
 	int res;
 	if (!vms->oldmessages && !vms->newmessages)
 		res =	ast_play_and_wait(chan, "vm-no") ||
-			ast_play_and_wait(chan, "vm-message");
+			ast_play_and_wait(chan, "vm-youhave") ||
+			ast_play_and_wait(chan, "vm-messages");
 	else
 		res =	ast_play_and_wait(chan, "vm-youhave");
 	if (!res && vms->newmessages) {
