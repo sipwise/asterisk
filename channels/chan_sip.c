@@ -910,6 +910,10 @@ struct sip_refer {
 	enum referstatus status;			/*!< REFER status */
 };
 
+struct offered_media {
+	int offered;
+	char text[128];
+};
 /*! \brief sip_pvt: PVT structures are used for each SIP dialog, ie. a call, a registration, a subscribe  */
 static struct sip_pvt {
 	ast_mutex_t lock;			/*!< Dialog private lock */
@@ -1033,6 +1037,21 @@ static struct sip_pvt {
 	struct sip_invite_param *options;	/*!< Options for INVITE */
 	int autoframing;
 	int hangupcause;			/*!< Storage of hangupcause copied from our owner before we disconnect from the AST channel (only used at hangup) */
+	/*! When receiving an SDP offer, it is important to take note of what media types were offered.
+	 * By doing this, even if we don't want to answer a particular media stream with something meaningful, we can
+	 * still put an m= line in our answer with the port set to 0.
+	 *
+	 * The reason for the length being 3 is that in this branch of Asterisk, the only media types supported are 
+	 * image, audio, and video. Therefore we need to keep track of which types of media were offered.
+	 *
+	 * Note that if we wanted to be 100% correct, we would keep a list of all media streams offered. That way we could respond
+	 * even to unknown media types, and we could respond to multiple streams of the same type. Such large-scale changes
+	 * are not a good idea for released branches, though, so we're compromising by just making sure that for the common cases:
+	 * audio and video, and audio and T.38, we give the appropriate response to both media streams.
+	 *
+	 * The large-scale changes would be a good idea for implementing during an SDP rewrite.
+	 */
+	struct offered_media offered_media[3];
 } *iflist = NULL;
 
 /*! Max entires in the history list for a sip_pvt */
@@ -5109,6 +5128,64 @@ static void change_hold_state(struct sip_pvt *dialog, struct sip_request *req, i
 	return;
 }
 
+enum media_type {
+	SDP_AUDIO,
+	SDP_VIDEO,
+	SDP_IMAGE,
+};
+
+static int get_ip_and_port_from_sdp(struct sip_request *req, const enum media_type media, struct sockaddr_in *sin)
+{
+	const char *m;
+	const char *c;
+	int miterator = req->sdp_start;
+	int citerator = req->sdp_start;
+	int x = 0;
+	int numberofports;
+	int len;
+	char host[258] = ""; /*Initialize to empty so we will know if we have any input */
+	struct ast_hostent audiohp;
+	struct hostent *hp;
+
+	c = get_sdp_iterate(&citerator, req, "c");
+	if (sscanf(c, "IN IP4 %256s", host) != 1) {
+		ast_log(LOG_WARNING, "Invalid host in c= line, '%s'\n", c);
+		/* Continue since there may be a valid host in a c= line specific to the audio stream */
+	}
+	/* We only want the m and c lines for audio */
+	while ((m = get_sdp_iterate(&miterator, req, "m"))) {
+		if ((media == SDP_AUDIO && ((sscanf(m, "audio %d/%d RTP/AVP %n", &x, &numberofports, &len) == 2 && len > 0) ||
+		    (sscanf(m, "audio %d RTP/AVP %n", &x, &len) == 1 && len > 0))) ||
+			(media == SDP_VIDEO && ((sscanf(m, "video %d/%d RTP/AVP %n", &x, &numberofports, &len) == 2 && len > 0) ||
+		    (sscanf(m, "video %d RTP/AVP %n", &x, &len) == 1 && len > 0)))) {
+			/* See if there's a c= line for this media stream.
+			 * XXX There is no guarantee that we'll be grabbing the c= line for this
+			 * particular media stream here. However, this is the same logic used in process_sdp.
+			 */
+			c = get_sdp_iterate(&citerator, req, "c");
+			if (!ast_strlen_zero(c)) {
+				sscanf(c, "IN IP4 %256s", host);
+			}
+			break;
+		}
+	}
+
+	if (ast_strlen_zero(host) || x == 0) {
+		ast_log(LOG_WARNING, "Failed to read an alternate host or port in SDP. Expect %s problems\n", media == SDP_AUDIO ? "audio" : "video");
+		return -1;
+	}
+
+	hp = ast_gethostbyname(host, &audiohp);
+	if (!hp) {
+		ast_log(LOG_WARNING, "Could not look up IP address of alternate hostname. Expect %s problems\n", media == SDP_AUDIO? "audio" : "video");
+		return -1;
+	}
+
+	memcpy(&sin->sin_addr, hp->h_addr, sizeof(sin->sin_addr));
+	sin->sin_port = htons(x);
+	return 0;
+}
+
 /*! \brief Process SIP SDP offer, select formats and activate RTP channels
 	If offer is rejected, we will not change any properties of the call
  	Return 0 on success, a negative value on errors.
@@ -5181,6 +5258,7 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req)
 	/* Update our last rtprx when we receive an SDP, too */
 	p->lastrtprx = p->lastrtptx = time(NULL); /* XXX why both ? */
 
+	memset(p->offered_media, 0, sizeof(p->offered_media));
 
 	/* Try to find first media stream */
 	m = get_sdp(req, "m");
@@ -5219,11 +5297,14 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req)
 		if ((sscanf(m, "audio %d/%d RTP/AVP %n", &x, &numberofports, &len) == 2 && len > 0) ||
 		    (sscanf(m, "audio %d RTP/AVP %n", &x, &len) == 1 && len > 0)) {
 			audio = TRUE;
+			p->offered_media[SDP_AUDIO].offered = TRUE;
 			numberofmediastreams++;
 			/* Found audio stream in this media definition */
 			portno = x;
 			/* Scan through the RTP payload types specified in a "m=" line: */
-			for (codecs = m + len; !ast_strlen_zero(codecs); codecs = ast_skip_blanks(codecs + len)) {
+			codecs = m + len;
+			ast_copy_string(p->offered_media[SDP_AUDIO].text, codecs, sizeof(p->offered_media[SDP_AUDIO].text));
+			for (; !ast_strlen_zero(codecs); codecs = ast_skip_blanks(codecs + len)) {
 				if (sscanf(codecs, "%d%n", &codec, &len) != 1) {
 					ast_log(LOG_WARNING, "Error in codec string '%s'\n", codecs);
 					return -1;
@@ -5235,10 +5316,13 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req)
 		} else if ((sscanf(m, "video %d/%d RTP/AVP %n", &x, &numberofports, &len) == 2 && len > 0) ||
 		    (sscanf(m, "video %d RTP/AVP %n", &x, &len) == 1 && len >= 0)) {
 			/* If it is not audio - is it video ? */
-			ast_clear_flag(&p->flags[0], SIP_NOVIDEO);	
+			ast_clear_flag(&p->flags[0], SIP_NOVIDEO);
+			p->offered_media[SDP_VIDEO].offered = TRUE;
 			numberofmediastreams++;
 			vportno = x;
 			/* Scan through the RTP payload types specified in a "m=" line: */
+			codecs = m + len;
+			ast_copy_string(p->offered_media[SDP_VIDEO].text, codecs, sizeof(p->offered_media[SDP_VIDEO].text));
 			for (codecs = m + len; !ast_strlen_zero(codecs); codecs = ast_skip_blanks(codecs + len)) {
 				if (sscanf(codecs, "%d%n", &codec, &len) != 1) {
 					ast_log(LOG_WARNING, "Error in codec string '%s'\n", codecs);
@@ -5252,6 +5336,7 @@ static int process_sdp(struct sip_pvt *p, struct sip_request *req)
 		 (sscanf(m, "image %d UDPTL t38%n", &x, &len) == 1 && len >= 0) )) {
 			if (debug)
 				ast_verbose("Got T.38 offer in SDP in dialog %s\n", p->callid);
+			p->offered_media[SDP_IMAGE].offered = TRUE;
 			udptlportno = x;
 			numberofmediastreams++;
 			
@@ -6577,6 +6662,7 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 	size_t a_audio_left = sizeof(a_audio);
 	size_t a_video_left = sizeof(a_video);
 	size_t a_modem_left = sizeof(a_modem);
+	char dummy_answer[256];
 
 	int x;
 	int capability = 0;
@@ -6663,7 +6749,7 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 				vdest.sin_addr = p->ourip;
 				vdest.sin_port = vsin.sin_port;
 			}
-			ast_build_string(&m_video_next, &m_video_left, "m=video %d RTP/AVP", ntohs(vdest.sin_port));
+			ast_build_string(&m_video_next, &m_video_left, "m=video %d RTP/AVP", ntohs(vsin.sin_port));
 
 			/* Build max bitrate string */
 			if (p->maxcallbitrate)
@@ -6833,15 +6919,23 @@ static enum sip_result add_sdp(struct sip_request *resp, struct sip_pvt *p, int 
 		add_line(resp, m_audio);
 		add_line(resp, a_audio);
 		add_line(resp, hold);
+	} else if (p->offered_media[SDP_AUDIO].offered) {
+		snprintf(dummy_answer, sizeof(dummy_answer), "m=audio 0 RTP/AVP %s\r\n", p->offered_media[SDP_AUDIO].text);
+		add_line(resp, dummy_answer);
 	}
 	if (needvideo) { /* only if video response is appropriate */
 		add_line(resp, m_video);
 		add_line(resp, a_video);
 		add_line(resp, hold);	/* Repeat hold for the video stream */
+	} else if (p->offered_media[SDP_VIDEO].offered) {
+		snprintf(dummy_answer, sizeof(dummy_answer), "m=video 0 RTP/AVP %s\r\n", p->offered_media[SDP_VIDEO].text);
+		add_line(resp, dummy_answer);
 	}
 	if (add_t38) {
 		add_line(resp, m_modem);
 		add_line(resp, a_modem);
+	} else if (p->offered_media[SDP_IMAGE].offered) {
+		add_line(resp, "m=image 0 udptl t38\r\n");
 	}
 
 	/* Update lastrtprx when we send our SDP */
@@ -6983,6 +7077,7 @@ static int transmit_reinvite_with_sdp(struct sip_pvt *p)
 		add_header(&req, "X-asterisk-Info", "SIP re-invite (External RTP bridge)");
 	if (!ast_test_flag(&p->flags[0], SIP_NO_HISTORY))
 		append_history(p, "ReInv", "Re-invite sent");
+	memset(p->offered_media, 0, sizeof(p->offered_media));
 	add_sdp(&req, p, 1, 0);
 	/* Use this as the basis */
 	initialize_initreq(p, &req);
@@ -7005,6 +7100,7 @@ static int transmit_reinvite_with_t38_sdp(struct sip_pvt *p)
 	add_header(&req, "Supported", SUPPORTED_EXTENSIONS);
 	if (sipdebug)
 		add_header(&req, "X-asterisk-info", "SIP re-invite (T38 switchover)");
+	memset(p->offered_media, 0, sizeof(p->offered_media));
 	add_sdp(&req, p, 0, 1);
 
 	/* Use this as the basis */
@@ -7332,6 +7428,7 @@ static int transmit_invite(struct sip_pvt *p, int sipmethod, int sdp, int init)
 		ast_channel_unlock(chan);
 	}
 	if (sdp) {
+		memset(p->offered_media, 0, sizeof(p->offered_media));
 		if (p->udptl && p->t38.state == T38_LOCAL_REINVITE) {
 			ast_udptl_offered_from_local(p->udptl, 1);
 			if (option_debug)
@@ -14455,6 +14552,21 @@ static int handle_request_invite(struct sip_pvt *p, struct sip_request *req, int
 		} else {
 			/* We already have a pending invite. Sorry. You are on hold. */
 			p->glareinvite = seqno;
+			if (p->rtp && find_sdp(req)) {
+				struct sockaddr_in sin;
+				if (get_ip_and_port_from_sdp(req, SDP_AUDIO, &sin)) {
+					ast_log(LOG_WARNING, "Failed to set an alternate media source on glared reinvite. Audio may not work properly on this call.\n");
+				} else {
+					ast_rtp_set_alt_peer(p->rtp, &sin);
+				}
+				if (p->vrtp) {
+					if (get_ip_and_port_from_sdp(req, SDP_VIDEO, &sin)) {
+						ast_log(LOG_WARNING, "Failed to set an alternate media source on glared reinvite. Video may not work properly on this call.\n");
+					} else {
+						ast_rtp_set_alt_peer(p->vrtp, &sin);
+					}
+				}
+			}
 			transmit_response_reliable(p, "491 Request Pending", req);
 			if (option_debug)
 				ast_log(LOG_DEBUG, "Got INVITE on call where we already have pending INVITE, deferring that - %s\n", p->callid);
