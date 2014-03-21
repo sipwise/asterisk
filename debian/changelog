@@ -1,3 +1,12 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.2.2.0) unstable; urgency=low
+
+  [ Andrew Pogrebennyk ]
+  * [ef583e1] MT#5971 send m= line with port=0 in SDP answer if offer had unsupported media type
+
+  [ Sipwise Jenkins Builder ]
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Fri, 21 Mar 2014 17:21:15 +0100
+
 ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.2.1) unstable; urgency=low
 
   * New release.
