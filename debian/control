@@ -8,7 +8,7 @@ Build-Depends: autotools-dev,
                libncurses-dev,
                libssl-dev,
                unixodbc-dev
-Standards-Version: 3.9.3
+Standards-Version: 3.9.5
 
 Package: ngcp-asterisk
 Architecture: any
