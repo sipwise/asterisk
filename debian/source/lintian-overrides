@@ -1,0 +1,3 @@
+# https://reviewboard.asterisk.org/r/1503/
+# http://svnview.digium.com/svn/asterisk/trunk/main/sha1.c?r1=89473&r2=340283
+ngcp-asterisk source: license-problem-non-free-RFC main/sha1.c
