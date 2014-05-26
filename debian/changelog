@@ -1,3 +1,19 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.4.0.0) unstable; urgency=low
+
+  [ Andreas Granig ]
+  * [5c9fbf4] MT#5645 Fix "no message" for Romanian syntax.
+
+  [ Andrew Pogrebennyk ]
+  * [69c0881] MT#5971 send m= line with port=0 in SDP answer if offer had unsupported media type
+
+  [ Michael Prokop ]
+  * [9fa53ab] MT#6511 Bump Standards-Version to 3.9.5
+  * [67dcf3b] MT#6657 Ignore RFC licensing issue with main/sha1.c
+
+  [ Sipwise Jenkins Builder ]
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Mon, 26 May 2014 15:33:08 +0200
+
 ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.3) unstable; urgency=low
 
   * New release.
