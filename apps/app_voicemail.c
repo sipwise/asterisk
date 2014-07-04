@@ -789,7 +789,7 @@ static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, 
 {
 	int res;
 	char mailbox[256] = "";
-	char *argv[] = { alias };
+	const char *argv[] = { alias };
 	char *sql = "select distinct(vmusers.mailbox) from kamailio.voicemail_users vmusers " \
 		"left join provisioning.voip_subscribers pvs on vmusers.customer_id = pvs.uuid " \
 		"left join provisioning.voip_dbaliases vda on pvs.id = vda.subscriber_id " \
