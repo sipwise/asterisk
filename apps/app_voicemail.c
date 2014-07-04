@@ -7432,7 +7432,7 @@ static int vm_authenticate(struct ast_channel *chan, char *mailbox, int mailbox_
 				sw_normalize_user_match, err, erroffset);
 			return -1;
 		}
-		extra = pcre_study(ppat, 0, &err)
+		extra = pcre_study(ppat, 0, &err);
 		if(err) {
 			ast_log(LOG_WARNING, "Couldn't study regex '%s': %s\n",
 				sw_normalize_user_match, err);
