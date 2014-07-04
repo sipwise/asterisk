@@ -127,7 +127,6 @@ struct ast_vm_user;
 
 AST_THREADSTORAGE(ts_vmstate, ts_vmstate_init);
 
-static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, const char *context, const char *alias);
 static int init_mailstream (struct vm_state *vms, int box);
 static void write_file (char *filename, char *buffer, unsigned long len);
 /*static void status (MAILSTREAM *stream); */ /* No need for this. */
@@ -399,6 +398,7 @@ struct vm_state {
 	struct vm_state *persist_vms;
 #endif
 };
+static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, const char *context, const char *alias);
 static int advanced_options(struct ast_channel *chan, struct ast_vm_user *vmu, struct vm_state *vms, int msg, int option, signed char record_gain);
 static int dialout(struct ast_channel *chan, struct ast_vm_user *vmu, char *num, char *outgoing_context);
 static int play_record_review(struct ast_channel *chan, char *playfile, char *recordfile, int maxtime,
