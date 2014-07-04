@@ -127,6 +127,7 @@ struct ast_vm_user;
 
 AST_THREADSTORAGE(ts_vmstate, ts_vmstate_init);
 
+static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, const char *context, const char *alias);
 static int init_mailstream (struct vm_state *vms, int box);
 static void write_file (char *filename, char *buffer, unsigned long len);
 /*static void status (MAILSTREAM *stream); */ /* No need for this. */
@@ -783,46 +784,6 @@ static struct ast_vm_user *find_user_realtime(struct ast_vm_user *ivm, const cha
 		}	
 	} 
 	return retval;
-}
-
-static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, const char *context, const char *alias)
-{
-	int res;
-	char mailbox[256] = "";
-	const char *argv[] = { alias };
-	char *sql = "select distinct(vmusers.mailbox) from kamailio.voicemail_users vmusers " \
-		"left join provisioning.voip_subscribers pvs on vmusers.customer_id = pvs.uuid " \
-		"left join provisioning.voip_dbaliases vda on pvs.id = vda.subscriber_id " \
-		"where vda.username = ?";
-	struct generic_prepare_struct gps = { .sql = sql, .argc = 1, .argv = argv };
-	struct odbc_obj *obj = NULL;
-	SQLHSTMT stmt = NULL;
-
-	obj = ast_odbc_request_obj(odbc_database, 0);
-	stmt = ast_odbc_prepare_and_execute(obj, generic_prepare, &gps);
-	if (!stmt) {
-		ast_log(LOG_WARNING, "SQL Execute error!\n[%s]\n\n", sql);
-		ast_odbc_release_obj(obj);
-		return NULL;
-	}
-	res = SQLFetch(stmt);
-	if ((res != SQL_SUCCESS) && (res != SQL_SUCCESS_WITH_INFO)) {
-		ast_log(LOG_WARNING, "SQL Fetch error!\n[%s]\n\n", sql);
-		SQLFreeHandle (SQL_HANDLE_STMT, stmt);
-		ast_odbc_release_obj(obj);
-		return NULL;
-	}
-	res = SQLGetData(stmt, 1, SQL_CHAR, mailbox, sizeof(mailbox), NULL);
-	if ((res != SQL_SUCCESS) && (res != SQL_SUCCESS_WITH_INFO)) {
-		ast_log(LOG_WARNING, "SQL Get Data error!\n[%s]\n\n", sql);
-		SQLFreeHandle (SQL_HANDLE_STMT, stmt);
-		ast_odbc_release_obj(obj);
-		return NULL;
-	}
-	SQLFreeHandle(SQL_HANDLE_STMT, stmt);
-	ast_odbc_release_obj(obj);
-
-	return find_user_realtime(ivm, context, mailbox);
 }
 
 static struct ast_vm_user *find_user(struct ast_vm_user *ivm, const char *context, const char *mailbox)
@@ -2767,6 +2728,47 @@ static void rename_file(char *sdir, int smsg, char *mailboxuser, char *mailboxco
 		ast_log(LOG_WARNING, "Failed to obtain database object for '%s'!\n", odbc_database);
 	return;	
 }
+
+static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, const char *context, const char *alias)
+{
+	int res;
+	char mailbox[256] = "";
+	const char *argv[] = { alias };
+	char *sql = "select distinct(vmusers.mailbox) from kamailio.voicemail_users vmusers " \
+		"left join provisioning.voip_subscribers pvs on vmusers.customer_id = pvs.uuid " \
+		"left join provisioning.voip_dbaliases vda on pvs.id = vda.subscriber_id " \
+		"where vda.username = ?";
+	struct generic_prepare_struct gps = { .sql = sql, .argc = 1, .argv = argv };
+	struct odbc_obj *obj = NULL;
+	SQLHSTMT stmt = NULL;
+
+	obj = ast_odbc_request_obj(odbc_database, 0);
+	stmt = ast_odbc_prepare_and_execute(obj, generic_prepare, &gps);
+	if (!stmt) {
+		ast_log(LOG_WARNING, "SQL Execute error!\n[%s]\n\n", sql);
+		ast_odbc_release_obj(obj);
+		return NULL;
+	}
+	res = SQLFetch(stmt);
+	if ((res != SQL_SUCCESS) && (res != SQL_SUCCESS_WITH_INFO)) {
+		ast_log(LOG_WARNING, "SQL Fetch error!\n[%s]\n\n", sql);
+		SQLFreeHandle (SQL_HANDLE_STMT, stmt);
+		ast_odbc_release_obj(obj);
+		return NULL;
+	}
+	res = SQLGetData(stmt, 1, SQL_CHAR, mailbox, sizeof(mailbox), NULL);
+	if ((res != SQL_SUCCESS) && (res != SQL_SUCCESS_WITH_INFO)) {
+		ast_log(LOG_WARNING, "SQL Get Data error!\n[%s]\n\n", sql);
+		SQLFreeHandle (SQL_HANDLE_STMT, stmt);
+		ast_odbc_release_obj(obj);
+		return NULL;
+	}
+	SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+	ast_odbc_release_obj(obj);
+
+	return find_user_realtime(ivm, context, mailbox);
+}
+
 
 #else
 #ifndef IMAP_STORAGE
