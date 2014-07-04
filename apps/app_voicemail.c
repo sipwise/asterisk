@@ -106,6 +106,9 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision: 180567 $")
 #include "asterisk/res_odbc.h"
 #endif
 
+#include <ctype.h>
+#include <pcre.h>
+
 #ifdef IMAP_STORAGE
 #include "asterisk/threadstorage.h"
 
@@ -560,6 +563,8 @@ static int vmmaxmessage;
 static int maxgreet;
 static int skipms;
 static int maxlogins;
+static char sw_normalize_user_match[256];
+static char sw_normalize_user_replace[256];
 
 static struct ast_flags globalflags = {0};
 
@@ -585,6 +590,117 @@ static unsigned char adsifdn[4] = "\x00\x00\x00\x0F";
 static unsigned char adsisec[4] = "\x9B\xDB\xF7\xAC";
 static int adsiver = 1;
 static char emaildateformat[32] = "%A, %B %d, %Y at %r";
+
+
+/* sipwise pcre helper functions taken from contrib of pcre:
+
+	Written by: Bert Driehuis <driehuis@playbeing.org>
+        Copyright (c) 2000 Bert Driehuis
+
+	Permission is granted to anyone to use this software for any purpose on any
+	computer system, and to redistribute it freely, subject to the following
+	restrictions:
+
+	1. This software is distributed in the hope that it will be useful,
+	   but WITHOUT ANY WARRANTY; without even the implied warranty of
+	   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+	2. The origin of this software must not be misrepresented, either by
+	   explicit claim or by omission.
+
+	3. Altered versions must be plainly marked as such, and must not be
+	   misrepresented as being the original software.
+
+	4. If PCRE is embedded in any software that is released under the GNU
+	   General Purpose Licence (GPL), then the terms of that licence shall
+	   supersede any condition above with which it is incompatible.
+*/
+#define MAXCAPTURE	50
+
+static int findreplen(const char *rep, int nmat, const int *replen)
+{
+	int len = 0;
+	int val;
+	char *cp = (char *)rep;
+	while(*cp) {
+		if (*cp == '$' && isdigit(cp[1])) {
+			val = strtoul(&cp[1], &cp, 10);
+			if (val && val <= nmat + 1)
+				len += replen[val -1];
+			else
+				fprintf(stderr, "repl %d out of range\n", val);
+		} else {
+			cp++;
+			len++;
+		}
+	}
+	return len;
+}
+
+static void doreplace(char *out, const char *rep, 
+	int nmat, int *replen, const char **repstr)
+{
+	int val;
+	char *cp = (char *)rep;
+	while(*cp) {
+		if (*cp == '$' && isdigit(cp[1])) {
+			val = strtoul(&cp[1], &cp, 10);
+			if (val && val <= nmat + 1) {
+				strncpy(out, repstr[val - 1], replen[val - 1]);
+				out += replen[val -1];
+			}
+		} else {
+			*out++ = *cp++;
+		}
+	}
+}
+
+static char *edit(const char *str, int len, const char *rep, 
+	int nmat, const int *ovec)
+{
+	int i, slen, rlen;
+	const int *mvec = ovec;
+	char *res, *cp;
+	int replen[MAXCAPTURE];
+	const char *repstr[MAXCAPTURE];
+	nmat--;
+	ovec += 2;
+	for (i = 0; i < nmat; i++) {
+		replen[i] = ovec[i * 2 + 1] - ovec[i * 2];
+		repstr[i] = &str[ovec[i * 2]];
+	}
+	slen = len;
+	len -= mvec[1] - mvec[0];
+	len += rlen = findreplen(rep, nmat, replen);
+	cp = res = pcre_malloc(len + 1);
+	if (mvec[0] > 0) {
+		strncpy(cp, str, mvec[0]);
+		cp += mvec[0];
+	}
+	doreplace(cp, rep, nmat, replen, repstr);
+	cp += rlen;
+	if (mvec[1] < slen)
+		strcpy(cp, &str[mvec[1]]);
+	res[len] = 0;
+	return res;
+}
+
+char *pcre_subst(const pcre *ppat, const pcre_extra *extra, 
+	const char *str, int len,
+	int offset, int options, const char *rep)
+{
+	int nmat;
+	int ovec[MAXCAPTURE * 3];
+	nmat = pcre_exec(ppat, extra, str, len, offset, options,
+		ovec, sizeof(ovec));
+	if (nmat <= 0)
+		return NULL;
+	return(edit(str, len, rep, nmat, ovec));
+}
+
+/* end of pcre helper functions */
+
+
 
 
 static char *strip_control(const char *input, char *buf, size_t buflen)
@@ -7293,6 +7409,11 @@ static int vm_authenticate(struct ast_channel *chan, char *mailbox, int mailbox_
 	int useadsi=0, valid=0, logretries=0;
 	char password[AST_MAX_EXTENSION]="", *passptr;
 	struct ast_vm_user vmus, *vmu = NULL;
+	const char *err;
+	int erroffset;
+	pcre_extra *extra;
+	pcre *ppat;
+	char *normalized_mailbox;
 
 	/* If ADSI is supported, setup login screen */
 	adsi_begin(chan, &useadsi);
@@ -7301,6 +7422,22 @@ static int vm_authenticate(struct ast_channel *chan, char *mailbox, int mailbox_
 	if (!silent && !skipuser && ast_streamfile(chan, "vm-login", chan->language)) {
 		ast_log(LOG_WARNING, "Couldn't stream login file\n");
 		return -1;
+	}
+
+	if(sw_normalize_user_match[0] != '\0' && sw_normalize_user_replace[0] != '\0') {
+		// TODO: could be done once on start
+		ppat = pcre_compile(sw_normalize_user_match, 0, &err, &erroffset, NULL);
+		if(ppat == NULL) {
+			ast_log(LOG_WARNING, "Couldn't compile user match regex '%s': %s at offset %d\n",
+				sw_normalize_user_match, err, erroffset);
+			return -1;
+		}
+		extra = pcre_study(ppat, 0, &err)
+		if(err) {
+			ast_log(LOG_WARNING, "Couldn't study regex '%s': %s\n",
+				sw_normalize_user_match, err);
+			return -1;
+		}
 	}
 	
 	/* Authenticate them and get their mailbox/password */
@@ -7323,6 +7460,17 @@ static int vm_authenticate(struct ast_channel *chan, char *mailbox, int mailbox_
 		if (useadsi)
 			adsi_password(chan);
 
+		if(ppat && extra) {
+			ast_log(LOG_NOTICE, "Trying to rewrite user input '%s' using s/%s/%s/\n",
+				mailbox, sw_normalize_user_match, sw_normalize_user_replace);
+			normalized_mailbox = pcre_subst(ppat, extra, mailbox, strlen(mailbox), 0, 0, sw_normalize_user_replace);
+			if(normalized_mailbox) {
+				ast_log(LOG_NOTICE, "Rewrote mailbox user input '%s' to %s\n",
+					mailbox, normalized_mailbox);
+				ast_copy_string(mailbox, normalized_mailbox, mailbox_size);
+				free(normalized_mailbox);
+			}
+		}
 		if (!ast_strlen_zero(prefix)) {
 			char fullusername[80] = "";
 			ast_copy_string(fullusername, prefix, sizeof(fullusername));
@@ -8410,6 +8558,8 @@ static int load_config(void)
 	const char *extpc;
 	const char *emaildateformatstr;
 	const char *volgainstr;
+	const char *ast_sw_normalize_user_match = NULL;
+	const char *ast_sw_normalize_user_replace = NULL;
 	int x;
 	int tmpadsi[4];
 
@@ -8450,6 +8600,18 @@ static int load_config(void)
 			ast_copy_string(odbc_table, thresholdstr, sizeof(odbc_table));
 		}
 #endif		
+		/* sipwise sw_normalize_user_match/replace */
+		if ((ast_sw_normalize_user_match = ast_variable_retrieve(cfg, "general", "sw_normalize_user_match"))) {
+			ast_copy_string(sw_normalize_user_match, ast_sw_normalize_user_match, sizeof(sw_normalize_user_match));
+		} else {
+			sw_normalize_user_match[0] = '\0';	
+		}
+		if ((ast_sw_normalize_user_replace = ast_variable_retrieve(cfg, "general", "sw_normalize_user_replace"))) {
+			ast_copy_string(sw_normalize_user_replace, ast_sw_normalize_user_replace, sizeof(sw_normalize_user_replace));
+		} else {
+			sw_normalize_user_replace[0] = '\0';	
+		}
+
 		/* Mail command */
 		strcpy(mailcmd, SENDMAIL);
 		if ((astmailcmd = ast_variable_retrieve(cfg, "general", "mailcmd")))

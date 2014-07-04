@@ -6,6 +6,7 @@ Build-Depends: autotools-dev,
                debhelper (>= 7),
                libltdl-dev,
                libncurses-dev,
+               libpcre3-dev,
                libssl-dev,
                unixodbc-dev
 Standards-Version: 3.9.5
@@ -13,6 +14,7 @@ Standards-Version: 3.9.5
 Package: ngcp-asterisk
 Architecture: any
 Depends: libmyodbc,
+         libpcre3,
          ngcp-asterisk-sounds,
          unixodbc,
          ${misc:Depends},
