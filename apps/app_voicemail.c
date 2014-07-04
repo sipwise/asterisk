@@ -36,12 +36,14 @@
 /*** MAKEOPTS
 <category name="MENUSELECT_OPTS_app_voicemail" displayname="Voicemail Build Options" positive_output="yes" remove_on_change="apps/app_voicemail.o apps/app_directory.o">
 	<member name="ODBC_STORAGE" displayname="Storage of Voicemail using ODBC">
+		<depend>pcre</depend>
 		<depend>unixodbc</depend>
 		<depend>ltdl</depend>
 		<conflict>IMAP_STORAGE</conflict>
 		<defaultenabled>yes</defaultenabled>
 	</member>
 	<member name="IMAP_STORAGE" displayname="Storage of Voicemail using IMAP4">
+		<depend>pcre</depend>
 		<depend>imap_tk</depend>
 		<conflict>ODBC_STORAGE</conflict>
 		<use>ssl</use>
@@ -7411,8 +7413,8 @@ static int vm_authenticate(struct ast_channel *chan, char *mailbox, int mailbox_
 	struct ast_vm_user vmus, *vmu = NULL;
 	const char *err;
 	int erroffset;
-	pcre_extra *extra;
-	pcre *ppat;
+	pcre_extra *extra = NULL;
+	pcre *ppat = NULL;
 	char *normalized_mailbox;
 
 	/* If ADSI is supported, setup login screen */
