@@ -685,7 +685,7 @@ static char *edit(const char *str, int len, const char *rep,
 	return res;
 }
 
-char *pcre_subst(const pcre *ppat, const pcre_extra *extra, 
+static char *pcre_subst(const pcre *ppat, const pcre_extra *extra, 
 	const char *str, int len,
 	int offset, int options, const char *rep)
 {
