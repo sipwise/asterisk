@@ -785,6 +785,46 @@ static struct ast_vm_user *find_user_realtime(struct ast_vm_user *ivm, const cha
 	return retval;
 }
 
+static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, const char *context, const char *alias)
+{
+	int res;
+	char mailbox[256] = "";
+	char *argv[] = { alias };
+	char *sql = "select distinct(vmusers.mailbox) from kamailio.voicemail_users vmusers " \
+		"left join provisioning.voip_subscribers pvs on vmusers.customer_id = pvs.uuid " \
+		"left join provisioning.voip_dbaliases vda on pvs.id = vda.subscriber_id " \
+		"where vda.username = ?";
+	struct generic_prepare_struct gps = { .sql = sql, .argc = 1, .argv = argv };
+	struct odbc_obj *obj = NULL;
+	SQLHSTMT stmt = NULL;
+
+	obj = ast_odbc_request_obj(odbc_database, 0);
+	stmt = ast_odbc_prepare_and_execute(obj, generic_prepare, &gps);
+	if (!stmt) {
+		ast_log(LOG_WARNING, "SQL Execute error!\n[%s]\n\n", sql);
+		ast_odbc_release_obj(obj);
+		return NULL;
+	}
+	res = SQLFetch(stmt);
+	if ((res != SQL_SUCCESS) && (res != SQL_SUCCESS_WITH_INFO)) {
+		ast_log(LOG_WARNING, "SQL Fetch error!\n[%s]\n\n", sql);
+		SQLFreeHandle (SQL_HANDLE_STMT, stmt);
+		ast_odbc_release_obj(obj);
+		return NULL;
+	}
+	res = SQLGetData(stmt, 1, SQL_CHAR, mailbox, sizeof(mailbox), NULL);
+	if ((res != SQL_SUCCESS) && (res != SQL_SUCCESS_WITH_INFO)) {
+		ast_log(LOG_WARNING, "SQL Get Data error!\n[%s]\n\n", sql);
+		SQLFreeHandle (SQL_HANDLE_STMT, stmt);
+		ast_odbc_release_obj(obj);
+		return NULL;
+	}
+	SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+	ast_odbc_release_obj(obj);
+
+	return find_user_realtime(ivm, context, mailbox);
+}
+
 static struct ast_vm_user *find_user(struct ast_vm_user *ivm, const char *context, const char *mailbox)
 {
 	/* This function could be made to generate one from a database, too */
@@ -810,7 +850,10 @@ static struct ast_vm_user *find_user(struct ast_vm_user *ivm, const char *contex
 	} else
 	 {
 		ast_log (LOG_DEBUG,"call find_user_realtime for '%s@%s'\n", mailbox, context);
-		vmu = find_user_realtime(ivm, context, mailbox);
+
+		// vmu = find_user_realtime(ivm, context, mailbox);
+		// agranig: always find user by alias
+		vmu = find_user_realtime_by_alias(ivm, context, mailbox);
 	 }
 	AST_LIST_UNLOCK(&users);
 	return vmu;
