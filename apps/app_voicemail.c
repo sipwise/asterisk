@@ -2751,7 +2751,7 @@ static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, 
 	}
 	res = SQLFetch(stmt);
 	if ((res != SQL_SUCCESS) && (res != SQL_SUCCESS_WITH_INFO)) {
-		ast_log(LOG_WARNING, "SQL Fetch error!\n[%s]\n\n", sql);
+		ast_log(LOG_INFO, "Failed to fetch mailbox for alias '%s'\n", alias);
 		SQLFreeHandle (SQL_HANDLE_STMT, stmt);
 		ast_odbc_release_obj(obj);
 		return NULL;
@@ -2766,6 +2766,7 @@ static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, 
 	SQLFreeHandle(SQL_HANDLE_STMT, stmt);
 	ast_odbc_release_obj(obj);
 
+	ast_log(LOG_INFO, "Found mailbox '%s' for alias '%s'\n", mailbox, alias);
 	return find_user_realtime(ivm, context, mailbox);
 }
 
