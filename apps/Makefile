@@ -27,6 +27,7 @@ ifneq ($(findstring apps,$(MENUSELECT_EMBED)),)
   LOADABLE_MODS:=
 endif
 
+MENUSELECT_DEPENDS_app_voicemail+=$(MENUSELECT_DEPENDS_PCRE)
 MENUSELECT_OPTS_app_directory:=$(MENUSELECT_OPTS_app_voicemail)
 ifneq ($(findstring ODBC_STORAGE,$(MENUSELECT_OPTS_app_voicemail)),)
 MENUSELECT_DEPENDS_app_voicemail+=$(MENUSELECT_DEPENDS_ODBC_STORAGE)

@@ -192,10 +192,10 @@ AST_EXT_LIB_SETUP([NCURSES], [ncurses], [ncurses])
 AST_EXT_LIB_SETUP([NETSNMP], [Net-SNMP], [netsnmp])
 AST_EXT_LIB_SETUP([NEWT], [newt], [newt])
 AST_EXT_LIB_SETUP([UNIXODBC], [unixODBC], [odbc])
-AST_EXT_LIB_SETUP([PCRE], [pcre], [pcre])
 AST_EXT_LIB_SETUP([OGG], [OGG], [ogg])
 AST_EXT_LIB_SETUP([OSPTK], [OSP Toolkit], [osptk])
 AST_EXT_LIB_SETUP([OSS], [Open Sound System], [oss])
+AST_EXT_LIB_SETUP([PCRE], [pcre], [pcre])
 AST_EXT_LIB_SETUP([POPT], [popt], [popt])
 AST_EXT_LIB_SETUP([PGSQL], [PostgreSQL], [postgres])
 AST_EXT_LIB_SETUP([PRI], [ISDN PRI], [pri])
@@ -1186,7 +1186,7 @@ AST_EXT_LIB_CHECK([NEWT], [newt], [newtBell], [newt.h])
 
 AST_EXT_LIB_CHECK([UNIXODBC], [odbc], [SQLConnect], [sql.h], [])
 
-AST_EXT_LIB_CHECK([PBCE], [pcre], [pcre_compile], [pcre.h], [])
+AST_EXT_LIB_CHECK([PCRE], [pcre], [pcre_compile], [pcre.h], [])
 
 AST_EXT_LIB_CHECK([OGG], [ogg], [ogg_sync_init], [])
 
