@@ -31,19 +31,18 @@
 /*** MODULEINFO
 	<depend>res_adsi</depend>
 	<depend>res_smdi</depend>
+	<depend>pcre</depend>
  ***/
 
 /*** MAKEOPTS
 <category name="MENUSELECT_OPTS_app_voicemail" displayname="Voicemail Build Options" positive_output="yes" remove_on_change="apps/app_voicemail.o apps/app_directory.o">
 	<member name="ODBC_STORAGE" displayname="Storage of Voicemail using ODBC">
-		<depend>pcre</depend>
 		<depend>unixodbc</depend>
 		<depend>ltdl</depend>
 		<conflict>IMAP_STORAGE</conflict>
 		<defaultenabled>yes</defaultenabled>
 	</member>
 	<member name="IMAP_STORAGE" displayname="Storage of Voicemail using IMAP4">
-		<depend>pcre</depend>
 		<depend>imap_tk</depend>
 		<conflict>ODBC_STORAGE</conflict>
 		<use>ssl</use>
@@ -403,7 +402,10 @@ struct vm_state {
 	struct vm_state *persist_vms;
 #endif
 };
+
+#ifdef ODBC_STORAGE
 static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, const char *context, const char *alias);
+#endif
 static int advanced_options(struct ast_channel *chan, struct ast_vm_user *vmu, struct vm_state *vms, int msg, int option, signed char record_gain);
 static int dialout(struct ast_channel *chan, struct ast_vm_user *vmu, char *num, char *outgoing_context);
 static int play_record_review(struct ast_channel *chan, char *playfile, char *recordfile, int maxtime,
@@ -930,9 +932,12 @@ static struct ast_vm_user *find_user(struct ast_vm_user *ivm, const char *contex
 	 {
 		ast_log (LOG_DEBUG,"call find_user_realtime for '%s@%s'\n", mailbox, context);
 
-		// vmu = find_user_realtime(ivm, context, mailbox);
 		// agranig: always find user by alias
+#ifdef ODBC_STORAGE
 		vmu = find_user_realtime_by_alias(ivm, context, mailbox);
+#else
+		vmu = find_user_realtime(ivm, context, mailbox);
+#endif
 	 }
 	AST_LIST_UNLOCK(&users);
 	return vmu;
@@ -2924,6 +2929,7 @@ static void rename_file(char *sfn, char *dfn)
 	rename(stxt, dtxt);
 }
 #endif
+
 
 /*
  * A negative return value indicates an error.
@@ -5102,6 +5108,7 @@ static int get_folder2(struct ast_channel *chan, char *fn, int start)
 	return res;
 }
 
+#if 0
 static int vm_forwardoptions(struct ast_channel *chan, struct ast_vm_user *vmu, char *curdir, int curmsg, char *vmfmts,
 			     char *context, signed char record_gain, long *duration, struct vm_state *vms)
 {
@@ -5203,6 +5210,7 @@ static int vm_forwardoptions(struct ast_channel *chan, struct ast_vm_user *vmu, 
 		cmd = 0;
 	return cmd;
 }
+#endif
 
 static int notify_new_message(struct ast_channel *chan, struct ast_vm_user *vmu, int msgnum, long duration, char *fmt, char *cidnum, char *cidname)
 {
@@ -5264,6 +5272,7 @@ static int notify_new_message(struct ast_channel *chan, struct ast_vm_user *vmu,
 	return 0;
 }
 
+#if 0
 static int forward_message(struct ast_channel *chan, char *context, struct vm_state *vms, struct ast_vm_user *sender, char *fmt, int flag, signed char record_gain)
 {
 #ifdef IMAP_STORAGE
@@ -5485,6 +5494,7 @@ static int forward_message(struct ast_channel *chan, char *context, struct vm_st
 		free_user(vmtmp);
 	return res ? res : cmd;
 }
+#endif
 
 static int wait_file2(struct ast_channel *chan, struct vm_state *vms, char *file)
 {
