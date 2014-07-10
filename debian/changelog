@@ -1,3 +1,24 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.4.1.0) unstable; urgency=low
+
+  [ Andreas Granig ]
+  * [3af6359] MT#7955 Find voicemail user by alias.
+  * [6da3035] MT#7955 Fix compiler warning.
+  * [20daea7] MT#7955 Fix function declaration.
+  * [4826ee9] MT#7955 Another compilation fix.
+  * [3cedd70] MT#7955 Move declaration of by_alias function.
+  * [ae42848] MT#7955 Enhance logging for by_alias handling
+  * [428febb] MT#7955 Use LOG_NOTICE for alias logging.
+  * [ba21595] MT#7955 Allow regex rewrite of user mailbox.
+  * [05d10b7] MT#7955 FIx compile error.
+  * [e880dee] MT#7955 Fix compile error.
+  * [683dd93] MT#7955 Try to figure out where to add -lpcre
+  * [636153f] MT#7955 Add PCRE configure script.
+  * [20815b2] MT#7955 Make pcre deps compile/link correctly.
+
+  [ Sipwise Jenkins Builder ]
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Thu, 10 Jul 2014 15:16:06 +0200
+
 ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.4.0.0) unstable; urgency=low
 
   [ Andreas Granig ]
