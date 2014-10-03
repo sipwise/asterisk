@@ -8078,7 +8078,7 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 				adsi_status(chan, &vms);
 			break;
 		default:	/* Nothing */
-            if (folder_change && !vms.oldmessages && !vms.newmessages) {
+            if (folder_change && vms.lastmsg == -1) {
                 if(!strcasecmp(chan->language, "ro")) {
                     ast_play_and_wait(chan, "vm-dir-empty");
                 } else {
