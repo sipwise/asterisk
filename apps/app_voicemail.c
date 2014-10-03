@@ -7564,14 +7564,14 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 		ast_log(LOG_DEBUG, "Number of new messages: %d\n",vms.newmessages);
 		
 	/* Select proper mailbox FIRST!! */
-	ast_log(LOG_NOTICE, "+++++ 1");
+	ast_log(LOG_NOTICE, "+++++ 1\n");
 	if (play_auto) {
-	    ast_log(LOG_NOTICE, "+++++ play auto, open mailbox %d", play_folder);
+	    ast_log(LOG_NOTICE, "+++++ play auto, open mailbox %d\n", play_folder);
 		res = open_mailbox(&vms, vmu, play_folder);
 		if (res == ERROR_LOCK_PATH)
 			goto out;
 
-	    ast_log(LOG_NOTICE, "+++++ %d msg in folder %d", vms.lastmsg, play_folder);
+	    ast_log(LOG_NOTICE, "+++++ %d msg in folder %d\n", vms.lastmsg, play_folder);
 		/* If there are no new messages, inform the user and hangup */
 		if (vms.lastmsg == -1) {
 			cmd = vm_browse_messages(chan, &vms, vmu);
@@ -7579,16 +7579,16 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 			goto out;
 		}
 	} else {
-	    ast_log(LOG_NOTICE, "+++++ no play auto, open mailbox %d", play_folder);
+	    ast_log(LOG_NOTICE, "+++++ no play auto, open mailbox %d\n", play_folder);
 		if (!vms.newmessages && vms.oldmessages) {
-	        ast_log(LOG_NOTICE, "+++++ %d new, %d old, last is %d in folder %d", vms.newmessages, vms.oldmessages, vms.lastmsg, play_folder);
+	        ast_log(LOG_NOTICE, "+++++ %d new, %d old, last is %d in folder %d\n", vms.newmessages, vms.oldmessages, vms.lastmsg, play_folder);
 			/* If we only have old messages start here */
 			res = open_mailbox(&vms, vmu, 1);
 			play_folder = 1;
 			if (res == ERROR_LOCK_PATH)
 				goto out;
 		} else {
-	        ast_log(LOG_NOTICE, "+++++ missing path here, %d new, %d old, last is %d in folder %d", vms.newmessages, vms.oldmessages, vms.lastmsg, play_folder);
+	        ast_log(LOG_NOTICE, "+++++ missing path here, %d new, %d old, last is %d in folder %d\n", vms.newmessages, vms.oldmessages, vms.lastmsg, play_folder);
         }
 	}
 
@@ -7651,6 +7651,7 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 			if (cmd == '#') {
 				cmd = 0;
 			} else if (cmd > 0) {
+	            ast_log(LOG_NOTICE, "+++++ change folder, cmd=%d\n", cmd);
 				cmd = cmd - '0';
 				res = close_mailbox(&vms, vmu);
 				if (res == ERROR_LOCK_PATH)
@@ -7664,8 +7665,12 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 			if (useadsi)
 				adsi_status2(chan, &vms);
 				
-			if (!cmd)
+			if (!cmd) {
+	            ast_log(LOG_NOTICE, "+++++ change folder playing folder name");
 				cmd = vm_play_folder_name(chan, vms.vmbox);
+            } else {
+	            ast_log(LOG_NOTICE, "+++++ change folder not playing folder name");
+            }
 
 			vms.starting = 1;
 			break;
