@@ -7412,6 +7412,7 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 	signed char record_gain = 0;
 	int play_auto = 0;
 	int play_folder = 0;
+    int folder_change = 0;
 #ifdef IMAP_STORAGE
 	int deleted = 0;
 #endif
@@ -7645,6 +7646,7 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 			cmd = vm_browse_messages(chan, &vms, vmu);
 			break;
 		case '2': /* Change folders */
+            folder_change = 1;
 			if (useadsi)
 				adsi_folders(chan, 0, "Change to folder...");
 			cmd = get_folder2(chan, "vm-changeto", 0);
@@ -7840,7 +7842,7 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 			break;
 		default:	/* Nothing */
 	        ast_log(LOG_NOTICE, "+++++ default action, play instructions, starting=%d\n", vms.starting);
-            if (vms.starting && !vms.oldmessages && !vms.newmessages) {
+            if (folder_change && !vms.oldmessages && !vms.newmessages) {
                 if(!strcasecmp(chan->language, "ro")) {
                     ast_play_and_wait(chan, "vm-dir-empty");
                 } else {
@@ -7849,6 +7851,7 @@ static int vm_execmain(struct ast_channel *chan, void *data)
                         res = ast_play_and_wait(chan, "vm-messages");
                 }
             }
+            folder_change = 0;
 			cmd = vm_instructions(chan, &vms, 0);
 			break;
 		}
