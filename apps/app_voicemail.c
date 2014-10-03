@@ -7842,7 +7842,7 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 			break;
 		default:	/* Nothing */
 	        ast_log(LOG_NOTICE, "+++++ default action, play instructions, last=%d\n", vms.lastmsg);
-            if (folder_change && vms.lastmsg) {
+            if (folder_change && vms.lastmsg == -1) {
                 if(!strcasecmp(chan->language, "ro")) {
                     ast_play_and_wait(chan, "vm-dir-empty");
                 } else {
