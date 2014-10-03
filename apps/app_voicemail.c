@@ -31,7 +31,6 @@
 /*** MODULEINFO
 	<depend>res_adsi</depend>
 	<depend>res_smdi</depend>
-	<depend>pcre</depend>
  ***/
 
 /*** MAKEOPTS
@@ -106,9 +105,6 @@ ASTERISK_FILE_VERSION(__FILE__, "$Revision: 180567 $")
 #ifdef ODBC_STORAGE
 #include "asterisk/res_odbc.h"
 #endif
-
-#include <ctype.h>
-#include <pcre.h>
 
 #ifdef IMAP_STORAGE
 #include "asterisk/threadstorage.h"
@@ -402,10 +398,6 @@ struct vm_state {
 	struct vm_state *persist_vms;
 #endif
 };
-
-#ifdef ODBC_STORAGE
-static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, const char *context, const char *alias);
-#endif
 static int advanced_options(struct ast_channel *chan, struct ast_vm_user *vmu, struct vm_state *vms, int msg, int option, signed char record_gain);
 static int dialout(struct ast_channel *chan, struct ast_vm_user *vmu, char *num, char *outgoing_context);
 static int play_record_review(struct ast_channel *chan, char *playfile, char *recordfile, int maxtime,
@@ -567,8 +559,6 @@ static int vmmaxmessage;
 static int maxgreet;
 static int skipms;
 static int maxlogins;
-static char sw_normalize_user_match[256];
-static char sw_normalize_user_replace[256];
 
 static struct ast_flags globalflags = {0};
 
@@ -594,117 +584,6 @@ static unsigned char adsifdn[4] = "\x00\x00\x00\x0F";
 static unsigned char adsisec[4] = "\x9B\xDB\xF7\xAC";
 static int adsiver = 1;
 static char emaildateformat[32] = "%A, %B %d, %Y at %r";
-
-
-/* sipwise pcre helper functions taken from contrib of pcre:
-
-	Written by: Bert Driehuis <driehuis@playbeing.org>
-        Copyright (c) 2000 Bert Driehuis
-
-	Permission is granted to anyone to use this software for any purpose on any
-	computer system, and to redistribute it freely, subject to the following
-	restrictions:
-
-	1. This software is distributed in the hope that it will be useful,
-	   but WITHOUT ANY WARRANTY; without even the implied warranty of
-	   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-	2. The origin of this software must not be misrepresented, either by
-	   explicit claim or by omission.
-
-	3. Altered versions must be plainly marked as such, and must not be
-	   misrepresented as being the original software.
-
-	4. If PCRE is embedded in any software that is released under the GNU
-	   General Purpose Licence (GPL), then the terms of that licence shall
-	   supersede any condition above with which it is incompatible.
-*/
-#define MAXCAPTURE	50
-
-static int findreplen(const char *rep, int nmat, const int *replen)
-{
-	int len = 0;
-	int val;
-	char *cp = (char *)rep;
-	while(*cp) {
-		if (*cp == '$' && isdigit(cp[1])) {
-			val = strtoul(&cp[1], &cp, 10);
-			if (val && val <= nmat + 1)
-				len += replen[val -1];
-			else
-				fprintf(stderr, "repl %d out of range\n", val);
-		} else {
-			cp++;
-			len++;
-		}
-	}
-	return len;
-}
-
-static void doreplace(char *out, const char *rep, 
-	int nmat, int *replen, const char **repstr)
-{
-	int val;
-	char *cp = (char *)rep;
-	while(*cp) {
-		if (*cp == '$' && isdigit(cp[1])) {
-			val = strtoul(&cp[1], &cp, 10);
-			if (val && val <= nmat + 1) {
-				strncpy(out, repstr[val - 1], replen[val - 1]);
-				out += replen[val -1];
-			}
-		} else {
-			*out++ = *cp++;
-		}
-	}
-}
-
-static char *edit(const char *str, int len, const char *rep, 
-	int nmat, const int *ovec)
-{
-	int i, slen, rlen;
-	const int *mvec = ovec;
-	char *res, *cp;
-	int replen[MAXCAPTURE];
-	const char *repstr[MAXCAPTURE];
-	nmat--;
-	ovec += 2;
-	for (i = 0; i < nmat; i++) {
-		replen[i] = ovec[i * 2 + 1] - ovec[i * 2];
-		repstr[i] = &str[ovec[i * 2]];
-	}
-	slen = len;
-	len -= mvec[1] - mvec[0];
-	len += rlen = findreplen(rep, nmat, replen);
-	cp = res = pcre_malloc(len + 1);
-	if (mvec[0] > 0) {
-		strncpy(cp, str, mvec[0]);
-		cp += mvec[0];
-	}
-	doreplace(cp, rep, nmat, replen, repstr);
-	cp += rlen;
-	if (mvec[1] < slen)
-		strcpy(cp, &str[mvec[1]]);
-	res[len] = 0;
-	return res;
-}
-
-static char *pcre_subst(const pcre *ppat, const pcre_extra *extra, 
-	const char *str, int len,
-	int offset, int options, const char *rep)
-{
-	int nmat;
-	int ovec[MAXCAPTURE * 3];
-	nmat = pcre_exec(ppat, extra, str, len, offset, options,
-		ovec, sizeof(ovec));
-	if (nmat <= 0)
-		return NULL;
-	return(edit(str, len, rep, nmat, ovec));
-}
-
-/* end of pcre helper functions */
-
-
 
 
 static char *strip_control(const char *input, char *buf, size_t buflen)
@@ -931,13 +810,7 @@ static struct ast_vm_user *find_user(struct ast_vm_user *ivm, const char *contex
 	} else
 	 {
 		ast_log (LOG_DEBUG,"call find_user_realtime for '%s@%s'\n", mailbox, context);
-
-		// agranig: always find user by alias
-#ifdef ODBC_STORAGE
-		vmu = find_user_realtime_by_alias(ivm, context, mailbox);
-#else
 		vmu = find_user_realtime(ivm, context, mailbox);
-#endif
 	 }
 	AST_LIST_UNLOCK(&users);
 	return vmu;
@@ -2852,48 +2725,6 @@ static void rename_file(char *sdir, int smsg, char *mailboxuser, char *mailboxco
 	return;	
 }
 
-static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, const char *context, const char *alias)
-{
-	int res;
-	char mailbox[256] = "";
-	char *argv[] = { (char*) alias };
-	char *sql = "select distinct(vmusers.mailbox) from kamailio.voicemail_users vmusers " \
-		"left join provisioning.voip_subscribers pvs on vmusers.customer_id = pvs.uuid " \
-		"left join provisioning.voip_dbaliases vda on pvs.id = vda.subscriber_id " \
-		"where vda.username = ?";
-	struct generic_prepare_struct gps = { .sql = sql, .argc = 1, .argv = argv };
-	struct odbc_obj *obj = NULL;
-	SQLHSTMT stmt = NULL;
-
-	obj = ast_odbc_request_obj(odbc_database, 0);
-	stmt = ast_odbc_prepare_and_execute(obj, generic_prepare, &gps);
-	if (!stmt) {
-		ast_log(LOG_WARNING, "SQL Execute error!\n[%s]\n\n", sql);
-		ast_odbc_release_obj(obj);
-		return NULL;
-	}
-	res = SQLFetch(stmt);
-	if ((res != SQL_SUCCESS) && (res != SQL_SUCCESS_WITH_INFO)) {
-		ast_log(LOG_NOTICE, "Failed to fetch mailbox for alias '%s'\n", alias);
-		SQLFreeHandle (SQL_HANDLE_STMT, stmt);
-		ast_odbc_release_obj(obj);
-		return NULL;
-	}
-	res = SQLGetData(stmt, 1, SQL_CHAR, mailbox, sizeof(mailbox), NULL);
-	if ((res != SQL_SUCCESS) && (res != SQL_SUCCESS_WITH_INFO)) {
-		ast_log(LOG_WARNING, "SQL Get Data error!\n[%s]\n\n", sql);
-		SQLFreeHandle (SQL_HANDLE_STMT, stmt);
-		ast_odbc_release_obj(obj);
-		return NULL;
-	}
-	SQLFreeHandle(SQL_HANDLE_STMT, stmt);
-	ast_odbc_release_obj(obj);
-
-	ast_log(LOG_NOTICE, "Found mailbox '%s' for alias '%s'\n", mailbox, alias);
-	return find_user_realtime(ivm, context, mailbox);
-}
-
-
 #else
 #ifndef IMAP_STORAGE
 static int count_messages(struct ast_vm_user *vmu, char *dir)
@@ -2929,7 +2760,6 @@ static void rename_file(char *sfn, char *dfn)
 	rename(stxt, dtxt);
 }
 #endif
-
 
 /*
  * A negative return value indicates an error.
@@ -3694,6 +3524,8 @@ static int invent_message(struct ast_channel *chan, struct ast_vm_user *vmu, cha
 	int res;
 	char fn[PATH_MAX];
 	char dest[PATH_MAX];
+	char local_num[256];
+	memset(local_num, '\0', sizeof(local_num));
 
 	snprintf(fn, sizeof(fn), "%s%s/%s/greet", VM_SPOOL_DIR, vmu->context, ext);
 
@@ -3714,9 +3546,17 @@ static int invent_message(struct ast_channel *chan, struct ast_vm_user *vmu, cha
 				return res;
 			}
 		}
+		if(dialed_num[0] == '4' && dialed_num[1] == '0') {
+                	strncpy(local_num, "0", 1);
+                        strncpy(local_num + 1, dialed_num + 2, strlen(dialed_num) - 2);
+		} else {
+                	strncpy(local_num, "00", 2);
+                        strncpy(local_num + 2, dialed_num, strlen(dialed_num));
+		}
 	
-		ast_log(LOG_DEBUG, "stream/wait dialed_num\n");
-		res = ast_say_digit_str(chan, dialed_num, ecodes, chan->language);
+		ast_log(LOG_WARNING, ">>>>>>>>>> stream local_num %s\n", local_num);
+		ast_log(LOG_DEBUG, "stream/wait local_num\n");
+		res = ast_say_digit_str(chan, local_num, ecodes, chan->language);
 	}
 
 	if (res)
@@ -4045,7 +3885,6 @@ static void run_externnotify(char *context, char *extension, char *uuid)
 	char ext_context[256] = "";
 	char ext_uuid[256] = "";
 	int newvoicemails = 0, oldvoicemails = 0;
-	struct ast_smdi_mwi_message *mwi_msg;
 
 	if (!ast_strlen_zero(context))
 		snprintf(ext_context, sizeof(ext_context), "%s@%s", extension, context);
@@ -4056,25 +3895,7 @@ static void run_externnotify(char *context, char *extension, char *uuid)
 	else
 		ast_copy_string(ext_context, extension, sizeof(ext_context));
 
-	if (!strcasecmp(externnotify, "smdi")) {
-		if (ast_app_has_voicemail(ext_context, NULL)) 
-			ast_smdi_mwi_set(smdi_iface, extension);
-		else
-			ast_smdi_mwi_unset(smdi_iface, extension);
-
-		if ((mwi_msg = ast_smdi_mwi_message_wait_station(smdi_iface, SMDI_MWI_WAIT_TIMEOUT, extension))) {
-			ast_log(LOG_ERROR, "Error executing SMDI MWI change for %s\n", extension);
-			if (!strncmp(mwi_msg->cause, "INV", 3))
-				ast_log(LOG_ERROR, "Invalid MWI extension: %s\n", mwi_msg->fwd_st);
-			else if (!strncmp(mwi_msg->cause, "BLK", 3))
-				ast_log(LOG_WARNING, "MWI light was already on or off for %s\n", mwi_msg->fwd_st);
-			ast_log(LOG_WARNING, "The switch reported '%s'\n", mwi_msg->cause);
-			ASTOBJ_UNREF(mwi_msg, ast_smdi_mwi_message_destroy);
-		} else {
-			if (option_debug)
-				ast_log(LOG_DEBUG, "Successfully executed SMDI MWI change for %s\n", extension);
-		}
-	} else if (!ast_strlen_zero(externnotify)) {
+	if (!ast_strlen_zero(externnotify)) {
 		ast_log(LOG_DEBUG, "Perform inboxcount on context '%s'\n", ext_context);
 		if (inboxcount(ext_uuid, &newvoicemails, &oldvoicemails)) {
 			ast_log(LOG_ERROR, "Problem in calculating number of voicemail messages available for extension %s\n", extension);
@@ -5581,7 +5402,7 @@ static int play_message_datetime(struct ast_channel *chan, struct ast_vm_user *v
 	else if (!strcasecmp(chan->language,"it"))      /* ITALIAN syntax */
 		res = ast_say_date_with_format(chan, t, AST_DIGIT_ANY, chan->language, "'vm-received' q 'digits/at' 'digits/hours' k 'digits/e' M 'digits/minutes'", NULL);
 	else if (!strcasecmp(chan->language,"ro"))      /* ROMANIAN syntax */
-		res = ast_say_date_with_format(chan, t, AST_DIGIT_ANY, chan->language, "'vm-received' q 'digits/at' 'digits/hours' k 'vm-and' M 'digits/minutes'", NULL);
+		res = ast_say_date_with_format(chan, t, AST_DIGIT_ANY, chan->language, "'vm-received' q 'digits/at' HM", NULL);
 	else if (!strcasecmp(chan->language,"gr"))
 		res = ast_say_date_with_format(chan, t, AST_DIGIT_ANY, chan->language, "'vm-received' q  H 'digits/kai' M ", NULL);
 	else if (!strcasecmp(chan->language,"pt_BR"))
@@ -6005,13 +5826,32 @@ static int vm_play_folder_name_ua(struct ast_channel *chan, char *mbox)
 	}
 }
 
+static int vm_play_folder_name_ro(struct ast_channel *chan, char *mbox)
+{
+	int cmd;
+
+	/*
+	if (!strcasecmp(mbox, "vm-INBOX")) {
+		cmd = ast_play_and_wait(chan, "vm-messages");
+		return cmd ? cmd : ast_play_and_wait(chan, "vm-INBOXa");
+	} else {
+		cmd = ast_play_and_wait(chan, "vm-messages");
+		return cmd ? cmd : ast_play_and_wait(chan, mbox);
+	}
+	*/
+	cmd = ast_play_and_wait(chan, "vm-messages");
+	return cmd ? cmd : ast_play_and_wait(chan, "vm-INBOX");
+}
+
 static int vm_play_folder_name(struct ast_channel *chan, char *mbox)
 {
 	int cmd;
 
-	if (!strcasecmp(chan->language, "ro") || !strcasecmp(chan->language, "it") || !strcasecmp(chan->language, "es") || !strcasecmp(chan->language, "pt") || !strcasecmp(chan->language, "pt_BR")) { /* Italian, Spanish, French or Portuguese syntax */
+	if (!strcasecmp(chan->language, "it") || !strcasecmp(chan->language, "es") || !strcasecmp(chan->language, "pt") || !strcasecmp(chan->language, "pt_BR")) { /* Italian, Spanish, French or Portuguese syntax */
 		cmd = ast_play_and_wait(chan, "vm-messages"); /* "messages */
 		return cmd ? cmd : ast_play_and_wait(chan, mbox);
+	} else if (!strcasecmp(chan->language, "ro")){
+		return vm_play_folder_name_ro(chan, mbox);
 	} else if (!strcasecmp(chan->language, "gr")){
 		return vm_play_folder_name_gr(chan, mbox);
 	} else if (!strcasecmp(chan->language, "pl")){
@@ -6184,6 +6024,9 @@ static int vm_intro_multilang(struct ast_channel *chan, struct vm_state *vms, co
 
 	res = ast_play_and_wait(chan, "vm-youhave");
 
+/* agranig: we don't need that, only used for russian, ukrainian */
+#if 0
+
 	if (!res && vms->newmessages) {
 		lastnum = vms->newmessages;
 
@@ -6212,6 +6055,7 @@ static int vm_intro_multilang(struct ast_channel *chan, struct vm_state *vms, co
 		}
 	}
 
+#endif
 	return res;
 }
 
@@ -7421,11 +7265,7 @@ static int vm_authenticate(struct ast_channel *chan, char *mailbox, int mailbox_
 	int useadsi=0, valid=0, logretries=0;
 	char password[AST_MAX_EXTENSION]="", *passptr;
 	struct ast_vm_user vmus, *vmu = NULL;
-	const char *err;
-	int erroffset;
-	pcre_extra *extra = NULL;
-	pcre *ppat = NULL;
-	char *normalized_mailbox;
+	char user_mailbox[80] = "";
 
 	/* If ADSI is supported, setup login screen */
 	adsi_begin(chan, &useadsi);
@@ -7435,54 +7275,46 @@ static int vm_authenticate(struct ast_channel *chan, char *mailbox, int mailbox_
 		ast_log(LOG_WARNING, "Couldn't stream login file\n");
 		return -1;
 	}
-
-	if(sw_normalize_user_match[0] != '\0' && sw_normalize_user_replace[0] != '\0') {
-		// TODO: could be done once on start
-		ppat = pcre_compile(sw_normalize_user_match, 0, &err, &erroffset, NULL);
-		if(ppat == NULL) {
-			ast_log(LOG_WARNING, "Couldn't compile user match regex '%s': %s at offset %d\n",
-				sw_normalize_user_match, err, erroffset);
-			return -1;
-		}
-		extra = pcre_study(ppat, 0, &err);
-		if(err) {
-			ast_log(LOG_WARNING, "Couldn't study regex '%s': %s\n",
-				sw_normalize_user_match, err);
-			return -1;
-		}
-	}
 	
 	/* Authenticate them and get their mailbox/password */
 	
 	while (!valid && (logretries < maxlogins)) {
-		/* Prompt for, and read in the username */
-		if (!skipuser && ast_readstring(chan, mailbox, mailbox_size - 1, 2000, 10000, "#") < 0) {
-			ast_log(LOG_WARNING, "Couldn't read username\n");
-			return -1;
-		}
-		if (ast_strlen_zero(mailbox)) {
-			if (chan->cid.cid_num) {
-				ast_copy_string(mailbox, chan->cid.cid_num, mailbox_size);
-			} else {
-				if (option_verbose > 2)
-					ast_verbose(VERBOSE_PREFIX_3 "Username not entered\n");	
-				return -1;
-			}
-		}
+                /* Prompt for, and read in the username */
+		memset(user_mailbox, '\0', sizeof(user_mailbox));
+                if (!skipuser && ast_readstring(chan, user_mailbox, sizeof(user_mailbox) - 1, 5000, 10000, "#") < 0) {
+                        ast_log(LOG_WARNING, "Couldn't read username\n");
+                        return -1;
+                }
+                if(!ast_strlen_zero(user_mailbox))
+                {
+                        if(user_mailbox[0] == '0')
+                        {
+				ast_log(LOG_WARNING, "sipwise-debug: national format, convert '%s'\n", user_mailbox);
+                                ast_copy_string(mailbox, "40", mailbox_size -1);
+                                ast_copy_string(mailbox + 2, user_mailbox + 1, mailbox_size -3);
+				ast_log(LOG_WARNING, "sipwise-debug: national format, converted '%s' to '%s'\n", user_mailbox, mailbox);
+                        }
+                        else
+                        {
+				ast_log(LOG_WARNING, "sipwise-debug: international format, keep '%s'\n", user_mailbox);
+                                ast_copy_string(mailbox, user_mailbox, mailbox_size -1);
+                        }
+                } 
+
+                if (ast_strlen_zero(mailbox)) {
+                        if (chan->cid.cid_num) {
+                                ast_copy_string(mailbox, chan->cid.cid_num, mailbox_size);
+                        } else {
+                                if (option_verbose > 2)
+                                        ast_verbose(VERBOSE_PREFIX_3 "Username not entered\n");
+                                return -1;
+                        }
+                }
+
+
 		if (useadsi)
 			adsi_password(chan);
 
-		if(ppat && extra) {
-			ast_log(LOG_NOTICE, "Trying to rewrite user input '%s' using s/%s/%s/\n",
-				mailbox, sw_normalize_user_match, sw_normalize_user_replace);
-			normalized_mailbox = pcre_subst(ppat, extra, mailbox, strlen(mailbox), 0, 0, sw_normalize_user_replace);
-			if(normalized_mailbox) {
-				ast_log(LOG_NOTICE, "Rewrote mailbox user input '%s' to %s\n",
-					mailbox, normalized_mailbox);
-				ast_copy_string(mailbox, normalized_mailbox, mailbox_size);
-				free(normalized_mailbox);
-			}
-		}
 		if (!ast_strlen_zero(prefix)) {
 			char fullusername[80] = "";
 			ast_copy_string(fullusername, prefix, sizeof(fullusername));
@@ -7492,7 +7324,16 @@ static int vm_authenticate(struct ast_channel *chan, char *mailbox, int mailbox_
 
 		if (option_debug)
 			ast_log(LOG_DEBUG, "Before find user for mailbox %s\n",mailbox);
+		ast_log(LOG_WARNING, "sipwise-debug: looking up '%s'\n", mailbox);
 		vmu = find_user(&vmus, context, mailbox);
+		if(vmu)
+		{
+			ast_log(LOG_WARNING, "sipwise-debug: found user '%s'\n", mailbox);
+		}
+		else
+		{
+			ast_log(LOG_WARNING, "sipwise-debug: not found user '%s'\n", mailbox);
+		}
 		if (vmu && (vmu->password[0] == '\0' || (vmu->password[0] == '-' && vmu->password[1] == '\0'))) {
 			/* saved password is blank, so don't bother asking */
 			password[0] = '\0';
@@ -7723,11 +7564,14 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 		ast_log(LOG_DEBUG, "Number of new messages: %d\n",vms.newmessages);
 		
 	/* Select proper mailbox FIRST!! */
+	ast_log(LOG_INFO, "+++++ 1");
 	if (play_auto) {
+	    ast_log(LOG_INFO, "+++++ play auto, open mailbox %d", play_folder);
 		res = open_mailbox(&vms, vmu, play_folder);
 		if (res == ERROR_LOCK_PATH)
 			goto out;
 
+	    ast_log(LOG_INFO, "+++++ %d msg in folder %d", vms.lastmsg, play_folder);
 		/* If there are no new messages, inform the user and hangup */
 		if (vms.lastmsg == -1) {
 			cmd = vm_browse_messages(chan, &vms, vmu);
@@ -7735,13 +7579,17 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 			goto out;
 		}
 	} else {
+	    ast_log(LOG_INFO, "+++++ no play auto, open mailbox %d", play_folder);
 		if (!vms.newmessages && vms.oldmessages) {
+	        ast_log(LOG_INFO, "+++++ %d new, %d old, last is %d in folder %d", vms.newmessages, vms.oldmessages, vms.lastmsg, play_folder);
 			/* If we only have old messages start here */
 			res = open_mailbox(&vms, vmu, 1);
 			play_folder = 1;
 			if (res == ERROR_LOCK_PATH)
 				goto out;
-		}
+		} else {
+	        ast_log(LOG_INFO, "+++++ missing path here, %d new, %d old, last is %d in folder %d", vms.newmessages, vms.oldmessages, vms.lastmsg, play_folder);
+        }
 	}
 
 	if (useadsi)
@@ -7826,39 +7674,6 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 			vms.repeats = 0;
 			while ((cmd > -1) && (cmd != 't') && (cmd != '#')) {
 				switch (cmd) {
-			/*Reply */
-			/*	case '1':
-					if (vms.lastmsg > -1 && !vms.starting) {
-						cmd = advanced_options(chan, vmu, &vms, vms.curmsg, 1, record_gain);
-						if (cmd == ERROR_LOCK_PATH) {
-							res = cmd;
-							goto out;
-						}
-					} else
-						cmd = ast_play_and_wait(chan, "vm-sorry");
-					cmd = 't';
-					break;
-			*/
-			/* Callback */
-			/*
-				case '2':
-					if (option_verbose > 2 && !vms.starting)
-						ast_verbose( VERBOSE_PREFIX_3 "Callback Requested\n");
-					if (!ast_strlen_zero(vmu->callback) && vms.lastmsg > -1 && !vms.starting) {
-						cmd = advanced_options(chan, vmu, &vms, vms.curmsg, 2, record_gain);
-						if (cmd == 9) {
-							silentexit = 1;
-							goto out;
-						} else if (cmd == ERROR_LOCK_PATH) {
-							res = cmd;
-							goto out;
-						}
-					}
-					else 
-						cmd = ast_play_and_wait(chan, "vm-sorry");
-					cmd = 't';
-					break;
-			*/
 			/* Envelope */
 				case '3':
 					if (vms.lastmsg > -1 && !vms.starting) {
@@ -7871,61 +7686,15 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 						cmd = ast_play_and_wait(chan, "vm-sorry");
 					cmd = 't';
 					break;
-			/* Dialout */
-			/*
-				case '4':
-					if (!ast_strlen_zero(vmu->dialout)) {
-						cmd = dialout(chan, vmu, NULL, vmu->dialout);
-						if (cmd == 9) {
-							silentexit = 1;
-							goto out;
-						}
-					}
-					else 
-						cmd = ast_play_and_wait(chan, "vm-sorry");
-					cmd = 't';
-					break;
-			*/
-			/* Leave VoiceMail */
-			/*
-				case '5':
-					if (ast_test_flag(vmu, VM_SVMAIL)) {
-						cmd = forward_message(chan, context, &vms, vmu, vmfmts, 1, record_gain);
-						if (cmd == ERROR_LOCK_PATH) {
-							res = cmd;
-							ast_log(LOG_WARNING, "forward_message failed to lock path.\n");
-							goto out;
-						}
-					} else
-						cmd = ast_play_and_wait(chan,"vm-sorry");
-					cmd='t';
-					break;
-			*/
-					
 				case '*': /* Return to main menu */
 					cmd = 't';
 					break;
 
 				default:
 					cmd = 0;
-			/*
-					if (!vms.starting) {
-						cmd = ast_play_and_wait(chan, "vm-toreply");
-					}
-					if (!ast_strlen_zero(vmu->callback) && !vms.starting && !cmd) {
-						cmd = ast_play_and_wait(chan, "vm-tocallback");
-					}
-			*/
 					if (!cmd && !vms.starting) {
 						cmd = ast_play_and_wait(chan, "vm-tohearenv");
 					}
-			/*
-					if (!ast_strlen_zero(vmu->dialout) && !cmd) {
-						cmd = ast_play_and_wait(chan, "vm-tomakecall");
-					}
-					if (ast_test_flag(vmu, VM_SVMAIL) && !cmd)
-						cmd=ast_play_and_wait(chan, "vm-leavemsg");
-			*/
 				
 					if (!cmd)
 						cmd = ast_play_and_wait(chan, "vm-starmain");
@@ -7991,18 +7760,6 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 			deleted = 1;
 #endif
 			break;
-	/*
-		case '8':
-			if (vms.lastmsg > -1) {
-				cmd = forward_message(chan, context, &vms, vmu, vmfmts, 0, record_gain);
-				if (cmd == ERROR_LOCK_PATH) {
-					res = cmd;
-					goto out;
-				}
-			} else
-				cmd = ast_play_and_wait(chan, "vm-nomore");
-			break;
-	*/
 		case '9':
 			if (vms.curmsg < 0 || vms.curmsg > vms.lastmsg) {
 				/* No message selected */
@@ -8570,8 +8327,6 @@ static int load_config(void)
 	const char *extpc;
 	const char *emaildateformatstr;
 	const char *volgainstr;
-	const char *ast_sw_normalize_user_match = NULL;
-	const char *ast_sw_normalize_user_replace = NULL;
 	int x;
 	int tmpadsi[4];
 
@@ -8612,18 +8367,6 @@ static int load_config(void)
 			ast_copy_string(odbc_table, thresholdstr, sizeof(odbc_table));
 		}
 #endif		
-		/* sipwise sw_normalize_user_match/replace */
-		if ((ast_sw_normalize_user_match = ast_variable_retrieve(cfg, "general", "sw_normalize_user_match"))) {
-			ast_copy_string(sw_normalize_user_match, ast_sw_normalize_user_match, sizeof(sw_normalize_user_match));
-		} else {
-			sw_normalize_user_match[0] = '\0';	
-		}
-		if ((ast_sw_normalize_user_replace = ast_variable_retrieve(cfg, "general", "sw_normalize_user_replace"))) {
-			ast_copy_string(sw_normalize_user_replace, ast_sw_normalize_user_replace, sizeof(sw_normalize_user_replace));
-		} else {
-			sw_normalize_user_replace[0] = '\0';	
-		}
-
 		/* Mail command */
 		strcpy(mailcmd, SENDMAIL);
 		if ((astmailcmd = ast_variable_retrieve(cfg, "general", "mailcmd")))
