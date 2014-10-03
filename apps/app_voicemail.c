@@ -7841,8 +7841,8 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 				adsi_status(chan, &vms);
 			break;
 		default:	/* Nothing */
-	        ast_log(LOG_NOTICE, "+++++ default action, play instructions, starting=%d\n", vms.starting);
-            if (folder_change && !vms.oldmessages && !vms.newmessages) {
+	        ast_log(LOG_NOTICE, "+++++ default action, play instructions, last=%d\n", vms.lastmsg);
+            if (folder_change && vms.lastmsg) {
                 if(!strcasecmp(chan->language, "ro")) {
                     ast_play_and_wait(chan, "vm-dir-empty");
                 } else {
