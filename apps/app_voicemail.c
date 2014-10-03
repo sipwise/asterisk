@@ -7671,6 +7671,7 @@ static int vm_execmain(struct ast_channel *chan, void *data)
             } else {
 	            ast_log(LOG_NOTICE, "+++++ change folder not playing folder name");
             }
+	        ast_log(LOG_NOTICE, "+++++ setting starting to 1");
 
 			vms.starting = 1;
 			break;
@@ -7838,6 +7839,7 @@ static int vm_execmain(struct ast_channel *chan, void *data)
 				adsi_status(chan, &vms);
 			break;
 		default:	/* Nothing */
+	        ast_log(LOG_NOTICE, "+++++ default action, play instructions\n");
 			cmd = vm_instructions(chan, &vms, 0);
 			break;
 		}
