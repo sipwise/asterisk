@@ -5840,7 +5840,7 @@ static int vm_play_folder_name_ro(struct ast_channel *chan, char *mbox)
 	}
 	*/
 	cmd = ast_play_and_wait(chan, "vm-messages");
-	return cmd ? cmd : ast_play_and_wait(chan, "vm-INBOX");
+	return cmd ? cmd : ast_play_and_wait(chan, mbox);
 }
 
 static int vm_play_folder_name(struct ast_channel *chan, char *mbox)
