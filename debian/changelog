@@ -1,3 +1,13 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.6.0.0) unstable; urgency=low
+
+  [ Andreas Granig ]
+  * [e6efa85] MT#9403 play prompt on change to empty folder
+  * [29ddb7b] MT#9403 Use proper check for empty folder
+
+  [ Sipwise Jenkins Builder ]
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Thu, 09 Oct 2014 16:16:14 +0200
+
 ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.5.0.0) unstable; urgency=low
 
   [ Andreas Granig ]
