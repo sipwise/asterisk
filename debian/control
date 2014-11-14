@@ -15,7 +15,7 @@ Package: ngcp-asterisk
 Architecture: any
 Depends: libmyodbc,
          libpcre3,
-         ngcp-asterisk-sounds,
+         ngcp-prompts,
          unixodbc,
          ${misc:Depends},
          ${shlibs:Depends}
