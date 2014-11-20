@@ -80,7 +80,7 @@ binary-arch: build install
 	dh_installchangelogs
 	dh_installman
 	dh_link
-	dh_strip
+	dh_strip --dbg-package=ngcp-asterisk-dbg
 	dh_compress
 	dh_fixperms
 	dh_installdeb
