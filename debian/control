@@ -21,3 +21,18 @@ Depends: libmyodbc,
          ${shlibs:Depends}
 Description: Sipwise's custom asterisk for NGCP platforms.
  This package provides Asterisk 1.4.24.1 with Sipwise and asterisk-es-rsp.org patches.
+
+Package: ngcp-asterisk-dbg
+Priority: extra
+Section: debug
+Architecture: any
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ngcp-asterisk (= ${binary:Version}),
+         ${misc:Depends}
+Conflicts: asterisk-dbg
+Replaces: asterisk-dbg
+Description: Sipwise's custom asterisk for NGCP platforms
+ This package provides Asterisk 1.4.24.1 with Sipwise and asterisk-es-rsp.org patches.
+ .
+ This package contains the debugging symbols for the Asterisk binary and
+ modules. You only need to install it if you need to debug Asterisk.
