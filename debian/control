@@ -13,6 +13,9 @@ Standards-Version: 3.9.6
 
 Package: ngcp-asterisk
 Architecture: any
+Conflicts: asterisk
+Replaces: asterisk
+Provides: asterisk
 Depends: libmyodbc,
          libpcre3,
          ngcp-prompts,
