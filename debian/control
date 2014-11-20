@@ -26,7 +26,6 @@ Package: ngcp-asterisk-dbg
 Priority: extra
 Section: debug
 Architecture: any
-Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ngcp-asterisk (= ${binary:Version}),
          ${misc:Depends}
