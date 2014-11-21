@@ -167,7 +167,7 @@ OTHER_SUBDIR_CFLAGS=-I$(ASTTOPDIR)/include
 ifeq ($(OSARCH),linux-gnu)
   ifeq ($(PROC),x86_64)
     # You must have GCC 3.4 to use k8, otherwise use athlon
-    PROC=k8
+    #PROC=k8
     #PROC=athlon
   endif
 
