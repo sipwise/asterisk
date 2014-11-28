@@ -1,3 +1,13 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.6.2.1) unstable; urgency=low
+
+  [ Michael Prokop ]
+  * [3c19688] MT#10257 Disable PROC=k8 setting to fix coredumps on certain Intel CPUs.
+    Thanks to Richard Fuchs for help in debugging this issue
+
+  [ Sipwise Jenkins Builder ]
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Fri, 28 Nov 2014 16:06:37 +0100
+
 ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.6.2.0) unstable; urgency=low
 
   * New release.
