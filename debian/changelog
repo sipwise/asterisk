@@ -1,3 +1,20 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.8.0.0) unstable; urgency=low
+
+  [ Andreas Granig ]
+  * [ffccce2] MT#10063 Depend on new ngcp-prompts
+
+  [ Michael Prokop ]
+  * [ca29583] MT#7505 Add gitreview file for asterisk
+  * [e0937fc] MT#10263 Provide debug package (ngcp-asterisk-dbg)
+  * [13e76d1] MT#9127 Bump Standards-Version to 3.9.6
+  * [3244912] MT#10257 Disable PROC=k8 setting to fix coredumps on certain Intel CPUs.
+    Thanks to Richard Fuchs for help in debugging this issue
+  * [7067f21] MT#10261 Conflict with Debian's asterisk package
+
+  [ Sipwise Jenkins Builder ]
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Wed, 07 Jan 2015 21:14:32 +0100
+
 ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.7.0.0) unstable; urgency=low
 
   * New release.
