@@ -1,3 +1,9 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.7.1.1) unstable; urgency=low
+
+  * New release.
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Thu, 15 Jan 2015 14:52:57 +0100
+
 ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.7.1.0) unstable; urgency=low
 
   [ Andreas Granig ]
