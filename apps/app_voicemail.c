@@ -2862,6 +2862,9 @@ static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, 
 		"left join provisioning.voip_dbaliases vda on pvs.id = vda.subscriber_id " \
 		"where vda.username = ?";
 	struct generic_prepare_struct gps = { .sql = sql, .argc = 1, .argv = argv };
+	char *sql_uuid = "select distinct(mailbox) from kamailio.voicemail_users "\
+        "where mailbox = ? and customer_id = mailbox";
+	struct generic_prepare_struct gps_uuid = { .sql = sql_uuid, .argc = 1, .argv = argv };
 	struct odbc_obj *obj = NULL;
 	SQLHSTMT stmt = NULL;
 
@@ -2874,10 +2877,23 @@ static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, 
 	}
 	res = SQLFetch(stmt);
 	if ((res != SQL_SUCCESS) && (res != SQL_SUCCESS_WITH_INFO)) {
-		ast_log(LOG_NOTICE, "Failed to fetch mailbox for alias '%s'\n", alias);
+		ast_log(LOG_NOTICE, "Failed to fetch mailbox for alias '%s', falling back to uuid search\n", alias);
 		SQLFreeHandle (SQL_HANDLE_STMT, stmt);
-		ast_odbc_release_obj(obj);
-		return NULL;
+
+        stmt = ast_odbc_prepare_and_execute(obj, generic_prepare, &gps_uuid);
+        if (!stmt) {
+            ast_log(LOG_WARNING, "SQL Execute error!\n[%s]\n\n", sql_uuid);
+            ast_odbc_release_obj(obj);
+            return NULL;
+        }
+        res = SQLFetch(stmt);
+        if ((res != SQL_SUCCESS) && (res != SQL_SUCCESS_WITH_INFO)) {
+            ast_log(LOG_NOTICE, "Failed to fetch mailbox for alias '%s' via uuid\n", alias);
+            SQLFreeHandle (SQL_HANDLE_STMT, stmt);
+
+    		ast_odbc_release_obj(obj);
+	    	return NULL;
+        }
 	}
 	res = SQLGetData(stmt, 1, SQL_CHAR, mailbox, sizeof(mailbox), NULL);
 	if ((res != SQL_SUCCESS) && (res != SQL_SUCCESS_WITH_INFO)) {
