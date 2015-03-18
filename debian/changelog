@@ -1,3 +1,15 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr4.0.0.0) unstable; urgency=low
+
+  [ Victor Seva ]
+  * [68bc8c2] MT#10793 generate firmware/iax dir to stop chan_iax errors of non exist dir
+
+  [ Andreas Granig ]
+  * [a667908] MT#10879 Try fallback to uuid for mailbox search.
+
+  [ Sipwise Jenkins Builder ]
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Wed, 18 Mar 2015 13:40:59 +0100
+
 ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.8.0.0) unstable; urgency=low
 
   [ Andreas Granig ]
