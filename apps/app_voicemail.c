@@ -2863,7 +2863,7 @@ static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, 
 		"where vda.username = ?";
 	struct generic_prepare_struct gps = { .sql = sql, .argc = 1, .argv = argv };
 	char *sql_uuid = "select distinct(mailbox) from kamailio.voicemail_users "\
-        "where mailbox = ? and customer_id = mailbox";
+        "where customer_id = ?";
 	struct generic_prepare_struct gps_uuid = { .sql = sql_uuid, .argc = 1, .argv = argv };
 	struct odbc_obj *obj = NULL;
 	SQLHSTMT stmt = NULL;
