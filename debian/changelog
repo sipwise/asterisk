@@ -1,3 +1,12 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.8.2.2) unstable; urgency=low
+
+  [ Alexander Lutay ]
+  * [b99108a] MT#13661 Backported ASTERISK-13966 from upstream
+
+  [ Sipwise Jenkins Builder ]
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Fri, 26 Jun 2015 12:08:36 +0200
+
 ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.8.2.1) unstable; urgency=low
 
   * New release.
