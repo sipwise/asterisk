@@ -1,3 +1,16 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr4.0.1.0) unstable; urgency=low
+
+  [ Victor Seva ]
+  * [a1319a8] MT#12905 MT#10879 fix fallback to uuid query for mailbox search
+  * [639a17d] MT#13821 add default file support to use RUN_DAEMON
+
+  [ Alexander Lutay ]
+  * [d7565dc] MT#13661 Backported ASTERISK-13966 from upstream
+
+  [ Sipwise Jenkins Builder ]
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Mon, 13 Jul 2015 15:00:24 +0200
+
 ngcp-asterisk (1.4.24.1+ngcp.9+0~mr4.0.0.0) unstable; urgency=low
 
   [ Victor Seva ]
