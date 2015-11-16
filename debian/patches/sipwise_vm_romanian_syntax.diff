@@ -1,0 +1,152 @@
+--- a/apps/app_voicemail.c
++++ b/apps/app_voicemail.c
+@@ -658,6 +658,7 @@
+ 	\arg \b es    - Spanish
+ 	\arg \b fr    - French
+ 	\arg \b it    - Italian
++	\arg \b ro    - Romanian
+ 	\arg \b nl    - Dutch
+ 	\arg \b pt    - Portuguese
+ 	\arg \b pt_BR - Portuguese (Brazil)
+@@ -5435,14 +5436,16 @@
+ 	} else {
+ 		/* Dispose just in case */
+ 		DISPOSE(fn, -1);
+-        /*
+-		res = ast_stream_and_wait(chan, "vm-theperson", ecodes);
+-		if (res)
+-        {
+-            ast_log(LOG_WARNING, "failed to stream/wait vm-theperson\n");
+-			return res;
++
++        if(!strcasecmp(ast_channel_language(chan), "ro")) { /* ROMANIAN */
++		    res = ast_stream_and_wait(chan, "vm-theperson", ecodes);
++            if (res)
++            {
++                ast_log(LOG_WARNING, "failed to stream/wait vm-theperson\n");
++                return res;
++            }
+         }
+-        */
++    
+         ast_log(LOG_DEBUG, "stream/wait dialed_num\n");
+ 		res = ast_say_digit_str(chan, dialed_num, ecodes, ast_channel_language(chan));
+ 		if (res)
+@@ -8305,6 +8308,8 @@
+ 		res = ast_say_date_with_format(chan, t, AST_DIGIT_ANY, ast_channel_language(chan), "'vm-received' q  H 'digits/kai' M ", NULL);
+ 	} else if (!strncasecmp(ast_channel_language(chan), "it", 2)) {     /* ITALIAN syntax */
+ 		res = ast_say_date_with_format(chan, t, AST_DIGIT_ANY, ast_channel_language(chan), "'vm-received' q 'digits/at' 'digits/hours' k 'digits/e' M 'digits/minutes'", NULL);
++	} else if (!strncasecmp(ast_channel_language(chan), "ro", 2)) {     /* ITALIAN syntax */
++        res = ast_say_date_with_format(chan, t, AST_DIGIT_ANY, ast_channel_language(chan), "'vm-received' q 'digits/at' 'digits/hours' k 'vm-and' M 'digits/minutes'", NULL);
+ 	} else if (!strncasecmp(ast_channel_language(chan), "nl", 2)) {     /* DUTCH syntax */
+ 		res = ast_say_date_with_format(chan, t, AST_DIGIT_ANY, ast_channel_language(chan), "'vm-received' q 'digits/nl-om' HM", NULL);
+ 	} else if (!strncasecmp(ast_channel_language(chan), "no", 2)) {     /* NORWEGIAN syntax */
+@@ -8903,7 +8908,8 @@
+ {
+ 	int cmd;
+ 
+-	if (  !strncasecmp(ast_channel_language(chan), "it", 2) ||
++	if (  !strncasecmp(ast_channel_language(chan), "ro", 2) ||
++	      !strncasecmp(ast_channel_language(chan), "it", 2) ||
+ 		  !strncasecmp(ast_channel_language(chan), "es", 2) ||
+ 		  !strncasecmp(ast_channel_language(chan), "pt", 2)) { /* Italian, Spanish, or Portuguese syntax */
+ 		cmd = ast_play_and_wait(chan, "vm-messages"); /* "messages */
+@@ -9135,6 +9141,54 @@
+ 	}
+ 	return res;
+ }
++
++/* ROMANIAN syntax */
++static int vm_intro_ro(struct ast_channel *chan, struct vm_state *vms)
++{
++   /* Introduce messages they have */
++   int res;
++   if (!vms->oldmessages && !vms->newmessages)
++       res =   ast_play_and_wait(chan, "vm-no") ||
++           ast_play_and_wait(chan, "vm-youhave") ||
++           ast_play_and_wait(chan, "vm-messages");
++   else
++       res =   ast_play_and_wait(chan, "vm-youhave");
++   if (!res && vms->newmessages) {
++       if(vms->newmessages == 1) {
++           res =
++               ast_play_and_wait(chan, "digits/1a") ||
++               ast_play_and_wait(chan, "vm-message") ||
++               ast_play_and_wait(chan, "vm-INBOXa");
++       } else {
++           if(vms->newmessages == 2)
++               res = ast_play_and_wait(chan, "digits/2f");
++           else
++               res = say_and_wait(chan, vms->newmessages, ast_channel_language(chan));
++           if(!res)
++               res = ast_play_and_wait(chan, "vm-messages") ||
++                     ast_play_and_wait(chan, "vm-INBOX");
++
++       }
++   }
++   if (!res && vms->oldmessages) {
++       if(vms->oldmessages == 1) {
++           res =
++               ast_play_and_wait(chan, "digits/1a") ||
++               ast_play_and_wait(chan, "vm-message") ||
++               ast_play_and_wait(chan, "vm-Old");
++       } else {
++           if(vms->oldmessages == 2)
++               res = ast_play_and_wait(chan, "digits/2f");
++           else
++               res = say_and_wait(chan, vms->oldmessages, ast_channel_language(chan));
++           if(!res)
++               res = ast_play_and_wait(chan, "vm-messages") ||
++                     ast_play_and_wait(chan, "vm-Old");
++
++       }
++   }
++   return res;
++}
+ 	
+ /* Default English syntax */
+ static int vm_intro_en(struct ast_channel *chan, struct vm_state *vms)
+@@ -9859,6 +9913,8 @@
+ 		return vm_intro_he(chan, vms);
+ 	} else if (!strncasecmp(ast_channel_language(chan), "it", 2)) {  /* ITALIAN syntax */
+ 		return vm_intro_it(chan, vms);
++	} else if (!strncasecmp(ast_channel_language(chan), "ro", 2)) {  /* ROMANIAN syntax */
++		return vm_intro_ro(chan, vms);
+ 	} else if (!strncasecmp(ast_channel_language(chan), "nl", 2)) {  /* DUTCH syntax */
+ 		return vm_intro_nl(chan, vms);
+ 	} else if (!strncasecmp(ast_channel_language(chan), "no", 2)) {  /* NORWEGIAN syntax */
+@@ -10421,6 +10477,25 @@
+ 	return cmd;
+ }
+ 
++/* ROMANIAN syntax */
++static int vm_browse_messages_ro(struct ast_channel *chan, struct vm_state *vms, struct ast_vm_user *vmu)
++{
++   int cmd=0;
++
++   if (vms->lastmsg > -1) {
++       cmd = play_message(chan, vmu, vms);
++   } else {
++       cmd = ast_play_and_wait(chan, "vm-no");
++       if (!cmd)
++           cmd = ast_play_and_wait(chan, "vm-message");
++       if (!cmd) {
++           snprintf(vms->fn, sizeof(vms->fn), "vm-%s", vms->curbox);
++           cmd = ast_play_and_wait(chan, vms->fn);
++       }
++   }
++   return cmd;
++}
++
+ /*! 
+  * \brief Spanish syntax for 'You have N messages' greeting.
+  * \param chan
+@@ -10546,6 +10621,8 @@
+ 		return vm_browse_messages_he(chan, vms, vmu);
+ 	} else if (!strncasecmp(ast_channel_language(chan), "it", 2)) {  /* ITALIAN */
+ 		return vm_browse_messages_it(chan, vms, vmu);
++	} else if (!strncasecmp(ast_channel_language(chan), "ro", 2)) {  /* ROMANIAN */
++		return vm_browse_messages_ro(chan, vms, vmu);
+ 	} else if (!strncasecmp(ast_channel_language(chan), "pt", 2)) {  /* PORTUGUESE */
+ 		return vm_browse_messages_pt(chan, vms, vmu);
+ 	} else if (!strncasecmp(ast_channel_language(chan), "vi", 2)) {  /* VIETNAMESE */

@@ -1,0 +1,35 @@
+--- a/apps/app_voicemail.c
++++ b/apps/app_voicemail.c
+@@ -11139,6 +11139,7 @@
+ 	signed char record_gain = 0;
+ 	int play_auto = 0;
+ 	int play_folder = 0;
++    int folder_change = 0;
+ 	int in_urgent = 0;
+ #ifdef IMAP_STORAGE
+ 	int deleted = 0;
+@@ -11399,6 +11400,7 @@
+ 			cmd = vm_browse_messages(chan, &vms, vmu);
+ 			break;
+ 		case '2': /* Change folders */
++            folder_change = 1;
+ 			ast_test_suite_event_notify("CHANGEFOLDER", "Message: browsing to a different folder");
+ 			if (useadsi)
+ 				adsi_folders(chan, 0, "Change to folder...");
+@@ -11815,6 +11817,16 @@
+ 				adsi_status(chan, &vms);
+ 			break;
+ 		default:	/* Nothing */
++            if (folder_change && vms.lastmsg == -1) {
++                if(!strcasecmp(ast_channel_language(chan), "ro")) {
++                    ast_play_and_wait(chan, "vm-dir-empty");
++                } else {
++                    res = ast_play_and_wait(chan, "vm-no");
++                    if (!res)
++                        res = ast_play_and_wait(chan, "vm-messages");
++                }
++            }
++            folder_change = 0;
+ 			ast_test_suite_event_notify("PLAYBACK", "Message: instructions");
+ 			cmd = vm_instructions(chan, vmu, &vms, 0, in_urgent);
+ 			break;

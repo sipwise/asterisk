@@ -1,0 +1,331 @@
+--- a/debian/rules
++++ b/debian/rules
+@@ -17,8 +17,10 @@
+ DPKG_EXPORT_BUILDFLAGS = 1
+ include /usr/share/dpkg/buildflags.mk
+ 
++PKG_PREFIX="ngcp-"
++
+ # Sanity check for a stable release:
+-SAVED_ABI_HASH = 8244290e5e83dd4667d88bdeb8ddf189
++#SAVED_ABI_HASH = 8244290e5e83dd4667d88bdeb8ddf189
+ 
+ export DEB_HOST_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+ export DEB_BUILD_GNU_TYPE ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+@@ -100,14 +102,14 @@
+ 	fi
+ 	$(FETCH_ENV) dh_auto_build -- $(BUILDFLAGS)
+ 	# Sanity check: don't break the ABI for modules:
+-	@abi_hash=`awk -F'"' '/AST_BUILDOPT_SUM/ {print $$2}' include/asterisk/buildopts.h`; \
+-	  if [ "$$abi_hash" != "$(SAVED_ABI_HASH)" ]; then \
+-	    echo "Debian packaging problem: ABI checksum changed."; \
+-	    echo "  Was: $(SAVED_ABI_HASH)"; \
+-	    echo "  Now: $$abi_hash"; \
+-	    echo "Check include/asterisk/buildopts.h"; \
+-	    exit 1; \
+-	  fi
++	#@abi_hash=`awk -F'"' '/AST_BUILDOPT_SUM/ {print $$2}' include/asterisk/buildopts.h`; \
++	#  if [ "$$abi_hash" != "$(SAVED_ABI_HASH)" ]; then \
++	#    echo "Debian packaging problem: ABI checksum changed."; \
++	#    echo "  Was: $(SAVED_ABI_HASH)"; \
++	#    echo "  Now: $$abi_hash"; \
++	#    echo "Check include/asterisk/buildopts.h"; \
++	#    exit 1; \
++	#  fi
+ 
+ SND_FILE=asterisk-core-sounds-en-gsm-1.4.20.tar.gz
+ override_dh_clean:
+@@ -132,7 +134,7 @@
+ ifeq (linux,$(BUILD_OS))
+ SUBPACKS_EXTRA += dahdi mobile vpb
+ endif
+-SUBPACKS_EXTRA_DIRS = $(SUBPACKS_EXTRA:%=$(CURDIR)/debian/asterisk-%)
++SUBPACKS_EXTRA_DIRS = $(SUBPACKS_EXTRA:%=$(CURDIR)/debian/$(PKG_PREFIX)asterisk-%)
+ SUBPACKS_EXTRA_DIRS_MOD = $(SUBPACKS_EXTRA_DIRS:%=%/usr/lib/asterisk/modules)
+ 
+ override_dh_auto_install:
+@@ -148,14 +150,14 @@
+ override_dh_install:
+ 	dh_install
+ 	extra_packs=`find $(SUBPACKS_EXTRA_DIRS_MOD) -name '*.so' -printf '%f\n'`\
+-		    ; cd $(CURDIR)/debian/asterisk-modules/usr/lib/asterisk/modules \
++		    ; cd $(CURDIR)/debian/$(PKG_PREFIX)asterisk-modules/usr/lib/asterisk/modules \
+ 		    && rm -f $$extra_packs
+ 
+ 	# Rename dh_install file for -imapstorage and -odbcstorage.
+-	mv $(CURDIR)/debian/asterisk-voicemail-imapstorage/usr/lib/asterisk/modules/app_voicemail_imapstorage.so \
+-		$(CURDIR)/debian/asterisk-voicemail-imapstorage/usr/lib/asterisk/modules/app_voicemail.so
+-	mv $(CURDIR)/debian/asterisk-voicemail-odbcstorage/usr/lib/asterisk/modules/app_voicemail_odbcstorage.so \
+-		$(CURDIR)/debian/asterisk-voicemail-odbcstorage/usr/lib/asterisk/modules/app_voicemail.so
++	mv $(CURDIR)/debian/$(PKG_PREFIX)asterisk-voicemail-imapstorage/usr/lib/asterisk/modules/app_voicemail_imapstorage.so \
++		$(CURDIR)/debian/$(PKG_PREFIX)asterisk-voicemail-imapstorage/usr/lib/asterisk/modules/app_voicemail.so
++	mv $(CURDIR)/debian/$(PKG_PREFIX)asterisk-voicemail-odbcstorage/usr/lib/asterisk/modules/app_voicemail_odbcstorage.so \
++		$(CURDIR)/debian/$(PKG_PREFIX)asterisk-voicemail-odbcstorage/usr/lib/asterisk/modules/app_voicemail.so
+ 
+ override_dh_fixperms:
+ 	dh_fixperms
+@@ -167,7 +169,7 @@
+ 	fi
+ 
+ override_dh_strip:
+-	dh_strip -a --dbg-package=asterisk-dbg
++	dh_strip -a --dbg-package=$(PKG_PREFIX)asterisk-dbg
+ 
+ print-version:
+ 	@@echo "Debian version:          $(DEBVERSION)"
+--- /dev/null
++++ b/.gitreview
+@@ -0,0 +1,4 @@
++[gerrit]
++host=gerrit.mgm.sipwise.com
++port=29418
++project=asterisk
+--- a/debian/control
++++ b/debian/control
+@@ -1,8 +1,7 @@
+ Source: asterisk
+ Priority: optional
+ Section: comm
+-Maintainer: Debian VoIP Team <pkg-voip-maintainers@lists.alioth.debian.org>
+-Uploaders: Mark Purcell <msp@debian.org>, Tzafrir Cohen <tzafrir@debian.org>, Jeremy Lainé <jeremy.laine@m4x.org>, Daniel Pocock <daniel@pocock.com.au>
++Maintainer: Sipwise Development Team <support@sipwise.com>
+ Build-Depends: debhelper (>= 8),
+  dpkg-dev (>= 1.16.1.1),
+  lsb-base (>= 3.2-14),
+@@ -53,18 +52,27 @@
+  libsrtp0-dev,
+  zlib1g-dev,
+  libedit-dev,
+- binutils-dev
++ binutils-dev,
++ libpcre3-dev 
+ Standards-Version: 3.9.5
+ Homepage: http://www.asterisk.org/
+ Vcs-Git: git://anonscm.debian.org/pkg-voip/asterisk.git
+ Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-voip/asterisk.git
+ 
+-Package: asterisk
++Package: ngcp-asterisk
+ Architecture: any
+-Depends: ${shlibs:Depends}, ${misc:Depends}, asterisk-config (= ${source:Version}) | asterisk-config-custom, asterisk-modules (= ${binary:Version}), adduser, asterisk-core-sounds-en-gsm | asterisk-prompt-en
+-Provides: asterisk-${asterisk:ABI}
+-Recommends: sox, asterisk-voicemail | asterisk-voicemail-storage, asterisk-moh-opsound-gsm
+-Suggests: asterisk-doc, asterisk-dev, asterisk-ooh323, asterisk-dahdi, asterisk-vpb
++Depends: ${shlibs:Depends}, ${misc:Depends}, 
++        ngcp-asterisk-config (= ${source:Version}) | asterisk-config-custom, 
++        ngcp-asterisk-modules (= ${binary:Version}), 
++        adduser, asterisk-core-sounds-en-gsm | asterisk-prompt-en | ngcp-prompts-ce | ngcp-prompts-pro,
++        libmyodbc,
++        libpcre3,
++        ngcp-prompts,
++        unixodbc
++Provides: ngcp-asterisk-${asterisk:ABI}
++Conflicts: ngcp-asterisk
++Recommends: sox, ngcp-asterisk-voicemail | ngcp-asterisk-voicemail-storage, asterisk-moh-opsound-gsm
++Suggests: ngcp-asterisk-doc, ngcp-asterisk-dev, ngcp-asterisk-ooh323, ngcp-asterisk-dahdi, ngcp-asterisk-vpb
+ Description: Open Source Private Branch Exchange (PBX)
+  Asterisk is an Open Source PBX and telephony toolkit.  It is, in a
+  sense, middleware between Internet and telephony channels on the bottom,
+@@ -89,23 +97,21 @@
+  This is the main package that includes the Asterisk daemon and most channel
+  drivers and applications.
+ 
+-Package: asterisk-modules
++Package: ngcp-asterisk-modules
+ Architecture: any
+ Depends: ${shlibs:Depends}, ${misc:Depends}
+ Section: libs
+-Breaks: asterisk (<< 1:1.8.3.3), asterisk-h323 (<< 1:1.8.4.4~dfsg-2)
+-Replaces: asterisk (<< 1:1.8.3.3)
++Conflicts: asterisk-modules
+ Description: loadable modules for the Asterisk PBX
+  Asterisk is an Open Source PBX and telephony toolkit.
+  .
+  This package includes most of the loadable modules of the Asterisk package.
+  There is normally no need to explicitly install it.
+ 
+-Package: asterisk-dahdi
++Package: ngcp-asterisk-dahdi
+ Architecture: linux-any
+-Depends: asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}, dahdi
+-Breaks: asterisk-modules (<< 1:11.6.0~dfsg-2)
+-Replaces: asterisk-modules (<< 1:11.6.0~dfsg-2)
++Depends: ngcp-asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}, dahdi
++Conflicts: asterisk-dahdi
+ Description: DAHDI devices support for the Asterisk PBX
+  Asterisk is an Open Source PBX and telephony toolkit.
+  .
+@@ -116,11 +122,10 @@
+  For more information about the Asterisk PBX, have a look at the Asterisk
+  package.
+ 
+-Package: asterisk-vpb
++Package: ngcp-asterisk-vpb
+ Architecture: linux-any
+-Depends: asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+-Breaks: asterisk-modules (<< 1:11.6.0~dfsg-1)
+-Replaces: asterisk-modules (<< 1:11.6.0~dfsg-1)
++Depends: ngcp-asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
++Conflicts: asterisk-vpb
+ Description: VoiceTronix devices support for the Asterisk PBX
+  Asterisk is an Open Source PBX and telephony toolkit.
+  .
+@@ -130,13 +135,11 @@
+  For more information about the Asterisk PBX, have a look at the Asterisk
+  package.
+ 
+-Package: asterisk-voicemail
++Package: ngcp-asterisk-voicemail
+ Architecture: any
+-Depends: asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+-Provides: asterisk-voicemail-storage
++Depends: ngcp-asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
++Provides: ngcp-asterisk-voicemail-storage
+ Conflicts: asterisk-voicemail-storage
+-Breaks: asterisk (<< 1:1.8.3.3)
+-Replaces: asterisk (<< 1:1.8.3.3)
+ Description: simple voicemail support for the Asterisk PBX
+  Asterisk is an Open Source PBX and telephony toolkit.
+  .
+@@ -148,13 +151,11 @@
+  For more information about the Asterisk PBX, have a look at the Asterisk
+  package.
+ 
+-Package: asterisk-voicemail-imapstorage
++Package: ngcp-asterisk-voicemail-imapstorage
+ Architecture: any
+-Depends: asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+-Provides: asterisk-voicemail-storage
+-Conflicts: asterisk-voicemail-storage
+-Breaks: asterisk (<< 1:1.8.3.3)
+-Replaces: asterisk (<< 1:1.8.3.3)
++Depends: ngcp-asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
++Provides: ngcp-asterisk-voicemail-storage
++Conflicts: ngcp-asterisk-voicemail-storage, asterisk-voicemail-storage
+ Description: IMAP voicemail storage support for the Asterisk PBX
+  Asterisk is an Open Source PBX and telephony toolkit.
+  .
+@@ -165,13 +166,11 @@
+  For more information about the Asterisk PBX, have a look at the Asterisk
+  package.
+ 
+-Package: asterisk-voicemail-odbcstorage
++Package: ngcp-asterisk-voicemail-odbcstorage
+ Architecture: any
+-Depends: asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+-Provides: asterisk-voicemail-storage
+-Conflicts: asterisk-voicemail-storage
+-Breaks: asterisk (<< 1:1.8.3.3)
+-Replaces: asterisk (<< 1:1.8.3.3)
++Depends: ngcp-asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
++Provides: ngcp-asterisk-voicemail-storage
++Conflicts: ngcp-asterisk-voicemail-storage, asterisk-voicemail-storage
+ Description: ODBC voicemail storage support for the Asterisk PBX
+  Asterisk is an Open Source PBX and telephony toolkit.
+  .
+@@ -182,9 +181,10 @@
+  For more information about the Asterisk PBX, have a look at the Asterisk
+  package.
+ 
+-Package: asterisk-ooh323
++Package: ngcp-asterisk-ooh323
+ Architecture: any
+-Depends: asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
++Depends: ngcp-asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
++Conflicts: asterisk-ooh323
+ Description: H.323 protocol support for the Asterisk PBX - ooH323c
+  Asterisk is an Open Source PBX and telephony toolkit.
+  .
+@@ -195,9 +195,10 @@
+  For more information about the Asterisk PBX, have a look at the Asterisk
+  package.
+ 
+-Package: asterisk-mp3
++Package: ngcp-asterisk-mp3
+ Architecture: any
+-Depends: asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
++Depends: ngcp-asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
++Conflicts: asterisk-mp3
+ Description: MP3 playback support for the Asterisk PBX
+  Asterisk is an Open Source PBX and telephony toolkit.
+  .
+@@ -207,9 +208,10 @@
+  For more information about the Asterisk PBX, have a look at the Asterisk
+  package.
+ 
+-Package: asterisk-mysql
++Package: ngcp-asterisk-mysql
+ Architecture: any
+-Depends: asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
++Depends: ngcp-asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
++Conflicts: asterisk-mysql
+ Description: MySQL database protocol support for the Asterisk PBX
+  Asterisk is an Open Source PBX and telephony toolkit.
+  .
+@@ -220,9 +222,10 @@
+  For more information about the Asterisk PBX, have a look at the Asterisk
+  package.
+ 
+-Package: asterisk-mobile
++Package: ngcp-asterisk-mobile
+ Architecture: linux-any
+-Depends: asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
++Depends: ngcp-asterisk (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
++Conflicts: asterisk-mobile
+ Description: Bluetooth phone support for the Asterisk PBX
+  Asterisk is an Open Source PBX and telephony toolkit.
+  .
+@@ -234,9 +237,10 @@
+  For more information about the Asterisk PBX, have a look at the Asterisk
+  package.
+ 
+-Package: asterisk-doc
++Package: ngcp-asterisk-doc
+ Depends: ${misc:Depends}
+-Recommends: asterisk
++Recommends: ngcp-asterisk
++Conflicts: asterisk-doc
+ Section: doc
+ Priority: extra
+ Architecture: all
+@@ -245,10 +249,11 @@
+  .
+  This package contains the documentation for configuring an Asterisk system.
+ 
+-Package: asterisk-dev
++Package: ngcp-asterisk-dev
+ Architecture: all
+ Depends: ${misc:Depends}
+-Recommends: asterisk
++Recommends: ngcp-asterisk
++Conflicts: asterisk-dev
+ Section: devel
+ Priority: extra
+ Description: Development files for Asterisk
+@@ -257,9 +262,10 @@
+  This package contains the include files used if you wish to compile a
+  package which requires Asterisk's source file headers.
+ 
+-Package: asterisk-dbg
++Package: ngcp-asterisk-dbg
+ Architecture: any
+-Depends: asterisk (= ${binary:Version}), ${misc:Depends}
++Depends: ngcp-asterisk (= ${binary:Version}), ${misc:Depends}
++Conflicts: asterisk-dbg
+ Section: debug
+ Priority: extra
+ Description: Debugging symbols for Asterisk
+@@ -269,10 +275,10 @@
+  Asterisk. The debugging symbols are used for execution tracing and core 
+  dump analysis. 
+ 
+-Package: asterisk-config
++Package: ngcp-asterisk-config
+ Depends: ${misc:Depends}
+-Recommends: asterisk
+-Conflicts: asterisk-config-custom
++Recommends: ngcp-asterisk
++Conflicts: asterisk-config, asterisk-config-custom
+ Architecture: all
+ Description: Configuration files for Asterisk
+  Asterisk is an Open Source PBX and telephony toolkit.
