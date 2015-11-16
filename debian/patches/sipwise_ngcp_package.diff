@@ -73,13 +73,6 @@
  
  print-version:
  	@@echo "Debian version:          $(DEBVERSION)"
---- /dev/null
-+++ b/.gitreview
-@@ -0,0 +1,4 @@
-+[gerrit]
-+host=gerrit.mgm.sipwise.com
-+port=29418
-+project=asterisk
 --- a/debian/control
 +++ b/debian/control
 @@ -1,8 +1,7 @@
