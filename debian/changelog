@@ -1,3 +1,12 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.8.6.0) unstable; urgency=medium
+
+  [ Victor Seva ]
+  * [e4e7d8b] MT#17231 debian/control: add asterisk-modules to conflicts
+
+  [ Sipwise Jenkins Builder ]
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Tue, 09 Feb 2016 19:04:54 +0100
+
 ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.8.5.0) unstable; urgency=medium
 
   * New release.
