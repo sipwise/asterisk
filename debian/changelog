@@ -1,3 +1,12 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.8.6.1) unstable; urgency=medium
+
+  [ Victor Seva ]
+  * [42998fa] MT#18907 support AST_DUMPCORE
+
+  [ Sipwise Jenkins Builder ]
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Mon, 25 Apr 2016 13:37:05 +0200
+
 ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.8.6.0) unstable; urgency=medium
 
   [ Victor Seva ]
