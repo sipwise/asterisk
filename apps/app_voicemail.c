@@ -2869,6 +2869,10 @@ static struct ast_vm_user *find_user_realtime_by_alias(struct ast_vm_user *ivm, 
 	SQLHSTMT stmt = NULL;
 
 	obj = ast_odbc_request_obj(odbc_database, 0);
+	if(!obj) {
+		ast_log(LOG_WARNING, "Failed to obtain database object for '%s'!\n", odbc_database);
+		return NULL;
+	}
 	stmt = ast_odbc_prepare_and_execute(obj, generic_prepare, &gps);
 	if (!stmt) {
 		ast_log(LOG_WARNING, "SQL Execute error!\n[%s]\n\n", sql);
