@@ -1,3 +1,12 @@
+ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.8.7.2) unstable; urgency=medium
+
+  [ Victor Seva ]
+  * [74ebf71] MT#21325 app_voicemail: don't crash if odbc fails
+
+  [ Sipwise Jenkins Builder ]
+
+ -- Sipwise Jenkins Builder <jenkins@sipwise.com>  Fri, 15 Jul 2016 17:39:00 +0200
+
 ngcp-asterisk (1.4.24.1+ngcp.9+0~mr3.8.7.1) unstable; urgency=medium
 
   * New release.
