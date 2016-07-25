@@ -1,3 +1,9 @@
+ngcp-asterisk (1.4.24.1-rsp+svn4100.6) unstable; urgency=medium
+
+  * rebuild with newer lib versions.
+
+ -- Victor Seva <vseva@sipwise.com>  Mon, 25 Jul 2016 10:09:45 +0200
+
 ngcp-asterisk (1.4.24.1-rsp+svn4100.5) unstable; urgency=low
 
   [ agranig ]
