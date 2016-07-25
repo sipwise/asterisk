@@ -1,4 +1,4 @@
-ngcp-asterisk (1.4.24.1-rsp+svn4100.6) unstable; urgency=medium
+ngcp-asterisk (1.4.24.1rsp+svn4100.6) unstable; urgency=medium
 
   * rebuild with newer lib versions.
 
